@@ -1,8 +1,16 @@
-function doGet() {
-  
+function doGet(e) {
+  // Si viene con action= es llamada de la PWA → API JSON
+  if (e && e.parameter && e.parameter.action) {
+    return doGetAPI(e);
+  }
+  // Sin parámetros → HTML del buscador original
   const html = HtmlService.createTemplateFromFile("moduloBuscar")
   .evaluate().addMetaTag('viewport', 'width=device-width, initial-scale=1');
   return html;
+}
+
+function doPost(e) {
+  return doPostAPI(e);
 }
 
 
