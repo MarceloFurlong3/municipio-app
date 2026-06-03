@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <style>
+        body {
+           background: linear-gradient(
+  135deg,
+  rgba(24, 182, 113, 1) 0%,
+  rgba(24, 182, 113, 1) 40%,
+  rgba(24, 41, 182, 1) 60%,
+  rgba(24, 41, 182, 1) 100%
+);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .logo {
+            margin: 2rem auto;
+            max-width: 80%;
+        }
+
+     .search-container,
+.table-container {
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 5px;
+  padding: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.table-container {
+  margin-top: 2rem;
+}
+
+.table thead th {
+  background-color: #24B671;
+  color: white;
+}
+
+.table td,
+.table th {
+  color: white !important;
+}
+    </style>
+</head>
+
+<body>
+    <img class="d-block mx-auto logo" src="https://imageup.me/images/cc85c92c-fde6-48bb-9a1d-0326bb248c46.png" height="120px" width="auto">
+
+    <div class="container mt-5">
+        <div class="row d-flex mb-5">
+            <div class="col-12">
+                <div class="search-container">
+                    <label for="name" style="color: white;">(Ejemplo: V-532 O PIB-0055)</label>
+                    <input for="name" type="text" class="form-control" id="text-box-numeroseguimiento"
+                        placeholder="Numero Seguimiento o RI" aria-label="First name">
+                    <button type="button" onclick="buscarMantenimientos()" class="btn btn-primary mt-2">Buscar</button>
+                </div>
+            </div>
+        </div>
+        <div class="table-container">
+            <div class="table-responsive">
+                <table id="MantenimientoTable" class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Fecha de Solicitud</th>
+                            <th>N°RI</th>
+                            <th>N°Seguimiento</th>
+                            <th>descripción</th>
+                            <th>Suministro</th>
+                            <th>Orden De Compra</th>
+                            <th>Estado</th>
+                            <th></th> 
+                        </tr>
+                    </thead>
+                    <tbody id="mantenimientosTableBody">
+
+                    </tbody>
+                </table>
+        </div>
+    </div>
+
+     <template id="mantenimientosRow">
+        <tr>
+            <td class="mantenimientosFecha"></td>
+            <td class="mantenimientosRI"></td>
+            <td class="mantenimientosSeguimiento"></td>
+            <td class="Descripcion"></td>
+            <td class="mantenimientoSuministro"></td>
+            <td class="mantenimientoOrdenCompra"></td>
+            <td class="mantenimientoEstado"></td>
+        </tr>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous">
+    </script>
+
+    <script>
+        function buscarMantenimientos() {
+            const numeroSeguimiento = document.getElementById("text-box-numeroseguimiento").value;
+            console.log(numeroSeguimiento)
+            let infoInventario = document.getElementById("numeroseguimiento")
+            let infoRI = document.getElementById("RI")
+
+            google.script.run
+                .withSuccessHandler(info => {
+                    let tableBody = document.getElementById("mantenimientosTableBody");
+                    tableBody.innerHTML = "";
+                    console.log(info)
+                    if (info.length > 0) {
+
+                        infoInventario = info[0][0];
+                        console.log(infoInventario)
+                        infoRI = info[0][2];
+
+                        info.forEach(mantenimiento => {
+                            const template = document.getElementById("mantenimientosRow")
+                            const templateRow = template.content;
+
+                              let tr= templateRow.cloneNode(true)
+              let colFecha = tr.querySelector(".mantenimientosFecha")
+              colFecha.style.color = "white"
+              let colSeguimiento = tr.querySelector(".mantenimientosSeguimiento")
+              colSeguimiento.style.color = "white"
+              let colRi = tr.querySelector(".mantenimientosRI")
+              colRi.style.color = "white"
+              let colDes = tr.querySelector(".Descripcion")
+              colDes.style.color = "white"
+              let colSuministro = tr.querySelector(".mantenimientoSuministro")
+               colSuministro.style.color = "white"
+              let colOrdenCompra = tr.querySelector(".mantenimientoOrdenCompra")
+               colOrdenCompra.style.color = "white"
+               let colEstado = tr.querySelector(".mantenimientoEstado")
+               colEstado.style.color = "white"
+
+                            colFecha.textContent = mantenimiento[1]
+                            colSeguimiento.textContent = mantenimiento[0]
+                            colRi.textContent = mantenimiento[2]
+                            colDes.textContent = mantenimiento[12]
+                            colSuministro.textContent = mantenimiento[7]
+                            colOrdenCompra.textContent = mantenimiento[17]
+                            colEstado.textContent = mantenimiento[18]
+
+                            tableBody.appendChild(tr)
+                        })
+                    } else {
+                        alert("No se encontraron registros.")
+                    }
+                })
+                .buscarMantenimientos(numeroSeguimiento);
+        }
+    </script>
+
+</body>
+
+</html>
