@@ -105,37 +105,49 @@ function renderCards(tipo) {
     return;
   }
 
-  // Agrupar: Estado → Mes → Sección → Letra RI
-  const estadoEmoji = { 'Iniciado':'🟢', 'Pase a Firma':'🔵', 'aprobado':'✅', 'pase a fisico':'🟠', 'Pendiente':'⏳' };
-  const porEstado = agruparPor(lista, s => s.estado_flujo || s.estado || 'Pendiente');
-  const estadosOrdenados = Object.keys(porEstado).sort((a,b) => ordenEstado(a) - ordenEstado(b));
-
   let html = '';
-  estadosOrdenados.forEach(estado => {
-    const emoji = estadoEmoji[estado] || '•';
-    html += `<div class="grp-estado">
-      <div class="grp-estado-lbl">${emoji} ${getEstadoLabel(estado)} <span class="grp-count">${porEstado[estado].length}</span></div>`;
 
-    const porMes = agruparPor(porEstado[estado], s => mesDesFecha(s.fecha));
-    Object.keys(porMes).sort().forEach(mes => {
-      html += `<div class="grp-mes"><div class="grp-mes-lbl">📅 ${mes}</div>`;
+  if (tipo === 'bhi') {
+    // BHI: agrupar solo por Sección
+    const porSec = agruparPor(lista, s => s.oficina || 'Sin sección');
+    Object.keys(porSec).sort().forEach(sec => {
+      html += `<div class="grp-estado">
+        <div class="grp-estado-lbl">🏢 ${sec} <span class="grp-count">${porSec[sec].length}</span></div>
+        <div class="cards">`;
+      porSec[sec].forEach(s => { html += cardHTML(s, tipo); });
+      html += `</div></div>`;
+    });
 
-      const porSec = agruparPor(porMes[mes], s => s.oficina || 'Sin sección');
-      Object.keys(porSec).sort().forEach(sec => {
-        html += `<div class="grp-sec"><div class="grp-sec-lbl">🏢 ${sec}</div>`;
+  } else {
+    // PIB: Estado → Mes → Sección → Letra RI
+    const estadoEmoji = { 'Iniciado':'🟢', 'Pase a Firma':'🔵', 'aprobado':'✅', 'pase a fisico':'🟠', 'Pendiente':'⏳' };
+    const porEstado = agruparPor(lista, s => s.estado_flujo || s.estado || 'Pendiente');
+    const estadosOrdenados = Object.keys(porEstado).sort((a,b) => ordenEstado(a) - ordenEstado(b));
 
-        const porRI = agruparPor(porSec[sec], s => letraRI(s.ri));
-        Object.keys(porRI).sort().forEach(letra => {
-          html += `<div class="grp-ri"><span class="grp-ri-lbl">RI: ${letra}</span><div class="cards">`;
-          porRI[letra].forEach(s => { html += cardHTML(s, tipo); });
-          html += `</div></div>`;
+    estadosOrdenados.forEach(estado => {
+      const emoji = estadoEmoji[estado] || '•';
+      html += `<div class="grp-estado">
+        <div class="grp-estado-lbl">${emoji} ${getEstadoLabel(estado)} <span class="grp-count">${porEstado[estado].length}</span></div>`;
+
+      const porMes = agruparPor(porEstado[estado], s => mesDesFecha(s.fecha));
+      Object.keys(porMes).sort().forEach(mes => {
+        html += `<div class="grp-mes"><div class="grp-mes-lbl">📅 ${mes}</div>`;
+        const porSec = agruparPor(porMes[mes], s => s.oficina || 'Sin sección');
+        Object.keys(porSec).sort().forEach(sec => {
+          html += `<div class="grp-sec"><div class="grp-sec-lbl">🏢 ${sec}</div>`;
+          const porRI = agruparPor(porSec[sec], s => letraRI(s.ri));
+          Object.keys(porRI).sort().forEach(letra => {
+            html += `<div class="grp-ri"><span class="grp-ri-lbl">RI: ${letra}</span><div class="cards">`;
+            porRI[letra].forEach(s => { html += cardHTML(s, tipo); });
+            html += `</div></div>`;
+          });
+          html += `</div>`;
         });
         html += `</div>`;
       });
       html += `</div>`;
     });
-    html += `</div>`;
-  });
+  }
 
   cont.innerHTML = html;
   cont.querySelectorAll('.card').forEach(card => {
