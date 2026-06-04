@@ -244,7 +244,7 @@ function renderRechazados(c) {
         <div class="dep-field full"><div class="dep-label">Detalle</div><div class="dep-val">${esc(p.detalle||'—')}</div></div>
         ${p.observaciones ? `<div class="dep-field full"><div class="dep-label">Observaciones (Col N)</div>${linkOTexto(p.observaciones, 'Observaciones')}</div>` : ''}
       </div>
-      ${p.motivo ? `<div class="dep-motivo">⚠️ Motivo de rechazo: ${esc(p.motivo)}</div>` : ''}
+      ${p.motivo ? `<div class="dep-motivo">⚠️ Motivo de rechazo: ${esc(p.motivo === 'Motivo Escrito' ? (p.observaciones || 'Sin detalle') : p.motivo)}</div>` : ''}
       <div class="dep-resubir">
         <span style="font-size:11px;color:#94a3b8;font-weight:600">¿Querés resubir el vale o presupuesto?</span>
         <a href="https://docs.google.com/forms" target="_blank" class="dep-btn-resubir">
