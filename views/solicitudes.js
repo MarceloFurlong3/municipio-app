@@ -160,12 +160,19 @@ function esURL(v) { return v && (String(v).startsWith('http://') || String(v).st
 
 function chipPresupuesto(v) {
   if (!v) return '';
-  if (esURL(v)) {
-    return `<a href="${v}" target="_blank" rel="noopener"
+  // Separar por espacios, saltos de línea o comas
+  const partes = String(v).split(/[\s,\n]+/).filter(Boolean);
+  const urls = partes.filter(p => esURL(p));
+  const texto = partes.filter(p => !esURL(p)).join(' ');
+
+  let html = '';
+  urls.forEach((url, i) => {
+    html += `<a href="${url}" target="_blank" rel="noopener"
       class="card-chip ok card-chip-link"
-      onclick="event.stopPropagation()">📎 Presupuesto</a>`;
-  }
-  return `<span class="card-chip ok">PRES: ${esc(v)}</span>`;
+      onclick="event.stopPropagation()">📎 Pres. ${urls.length > 1 ? i+1 : ''}</a>`;
+  });
+  if (texto) html += `<span class="card-chip ok">PRES: ${esc(texto)}</span>`;
+  return html;
 }
 
 function cardHTML(s, tipo) {

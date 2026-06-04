@@ -182,13 +182,22 @@ function esURL(s) {
 
 function linkOTexto(val, label) {
   if (!val || val === '—') return `<div class="dep-val">—</div>`;
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const conLinks = String(val).replace(urlRegex, url => {
-    const texto = url.length > 50 ? '🔗 Ver ' + label : '🔗 ' + url;
-    return `<a href="${url}" target="_blank" rel="noopener" class="dep-link"
-      onclick="verificarLink(event,'${url}')">${texto}</a>`;
+  // Separar por espacios/saltos de línea para detectar múltiples URLs
+  const partes = String(val).split(/[\s\n]+/).filter(Boolean);
+  const urls = partes.filter(p => esURL(p));
+  const textoPlano = partes.filter(p => !esURL(p)).join(' ');
+
+  if (urls.length === 0) return `<div class="dep-val">${esc(val)}</div>`;
+
+  let html = '<div class="dep-val">';
+  urls.forEach((url, i) => {
+    const etiqueta = urls.length > 1 ? `📎 ${label} ${i+1}` : `📎 ${label}`;
+    html += `<a href="${url}" target="_blank" rel="noopener" class="dep-link"
+      onclick="verificarLink(event,'${url}')" style="display:block;margin-bottom:3px">${etiqueta}</a>`;
   });
-  return `<div class="dep-val">${conLinks}</div>`;
+  if (textoPlano) html += `<span>${esc(textoPlano)}</span>`;
+  html += '</div>';
+  return html;
 }
 
 function esAnioActual(id) {
