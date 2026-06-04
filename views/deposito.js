@@ -64,6 +64,12 @@ function getHTML() { return `
 .dep-val { font-size:12px; font-weight:600; color:#0f172a; }
 .dep-val.full { grid-column:1/-1; }
 .dep-motivo { margin-top:10px; padding:10px 12px; background:#fef2f2; border-radius:10px; border-left:3px solid #dc2626; font-size:12px; color:#dc2626; font-weight:600; }
+.dep-link { color:#2563eb; text-decoration:underline; word-break:break-all; font-weight:600; font-size:12px; }
+.dep-link:hover { color:#1d4ed8; }
+.dep-resubir { margin-top:12px; padding-top:12px; border-top:1px solid #fecaca; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.dep-btn-resubir { display:inline-flex; align-items:center; gap:6px; background:#0b1b35; color:#fff; border:none; border-radius:10px; padding:8px 14px; font-family:'Barlow',sans-serif; font-size:12px; font-weight:700; cursor:pointer; text-decoration:none; transition:background .15s; }
+.dep-btn-resubir:hover { background:#1e3a5f; }
+.dep-btn-resubir svg { width:14px; height:14px; }
 
 /* EMPTY */
 .dep-empty { text-align:center; padding:60px 20px; color:#94a3b8; font-size:13px; }
@@ -161,14 +167,35 @@ async function cargar(c, forzar = false) {
   if (window.lucide) lucide.createIcons();
 }
 
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function esURL(s) {
+  return s && (s.startsWith('http://') || s.startsWith('https://'));
+}
+
+function linkOTexto(val, label) {
+  if (!val || val === '—') return `<div class="dep-val">—</div>`;
+  // Buscar todas las URLs dentro del texto
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const conLinks = String(val).replace(urlRegex, url =>
+    `<a href="${url}" target="_blank" rel="noopener" class="dep-link">${url.length > 40 ? '🔗 Ver ' + label : '🔗 ' + url}</a>`
+  );
+  return `<div class="dep-val">${conLinks}</div>`;
+}
+
+function esAnioActual(id) {
+  // Acepta IDs que terminen en -26 o -2026
+  return /-26$/.test(String(id).trim()) || /-2026$/.test(String(id).trim());
+}
+
 // ── RENDER PEDIDOS ────────────────────────────────────────────────────────────
 function renderPedidos(c) {
   const q = (c.querySelector('#dep-buscar-ped').value || '').toLowerCase();
   const lista = pedidosCache.filter(p =>
+    esAnioActual(p.id) &&
     `${p.id} ${p.seccion} ${p.detalle} ${p.ri} ${p.vale}`.toLowerCase().includes(q)
   );
   const cont = c.querySelector('#dep-cards-ped');
-  if (!lista.length) { cont.innerHTML = '<div class="dep-empty">Sin pedidos encontrados</div>'; return; }
+  if (!lista.length) { cont.innerHTML = '<div class="dep-empty">Sin pedidos de este año</div>'; return; }
 
   cont.innerHTML = lista.map(p => `
     <div class="dep-card">
@@ -180,12 +207,12 @@ function renderPedidos(c) {
       <div class="dep-grid">
         <div class="dep-field"><div class="dep-label">Sección</div><div class="dep-val">${esc(p.seccion||'—')}</div></div>
         <div class="dep-field"><div class="dep-label">RI</div><div class="dep-val">${esc(p.ri||'—')}</div></div>
-        <div class="dep-field"><div class="dep-label">Vale</div><div class="dep-val">${esc(p.vale||'—')}</div></div>
         <div class="dep-field"><div class="dep-label">N° Vale</div><div class="dep-val">${esc(p.num_vale||'—')}</div></div>
-        <div class="dep-field"><div class="dep-label">Presupuesto</div><div class="dep-val">${esc(p.presupuesto||'—')}</div></div>
         <div class="dep-field"><div class="dep-label">N° OT</div><div class="dep-val">${esc(p.num_ot||'—')}</div></div>
-        <div class="dep-field dep-val full"><div class="dep-label">Detalle del pedido</div><div class="dep-val">${esc(p.detalle||'—')}</div></div>
-        ${p.observaciones ? `<div class="dep-field dep-val full"><div class="dep-label">Observaciones</div><div class="dep-val">${esc(p.observaciones)}</div></div>` : ''}
+        <div class="dep-field full"><div class="dep-label">Vale</div>${linkOTexto(p.vale, 'Vale')}</div>
+        <div class="dep-field full"><div class="dep-label">Presupuesto</div>${linkOTexto(p.presupuesto, 'Presupuesto')}</div>
+        <div class="dep-field full"><div class="dep-label">Detalle del pedido</div><div class="dep-val">${esc(p.detalle||'—')}</div></div>
+        ${p.observaciones ? `<div class="dep-field full"><div class="dep-label">Observaciones (Col N)</div>${linkOTexto(p.observaciones, 'Observaciones')}</div>` : ''}
       </div>
     </div>
   `).join('');
@@ -196,10 +223,11 @@ function renderPedidos(c) {
 function renderRechazados(c) {
   const q = (c.querySelector('#dep-buscar-rec').value || '').toLowerCase();
   const lista = rechazadosCache.filter(p =>
+    esAnioActual(p.id) &&
     `${p.id} ${p.oficina} ${p.detalle} ${p.ri}`.toLowerCase().includes(q)
   );
   const cont = c.querySelector('#dep-cards-rec');
-  if (!lista.length) { cont.innerHTML = '<div class="dep-empty">Sin rechazados</div>'; return; }
+  if (!lista.length) { cont.innerHTML = '<div class="dep-empty">Sin rechazados de este año</div>'; return; }
 
   cont.innerHTML = lista.map(p => `
     <div class="dep-card rechazado">
@@ -211,12 +239,18 @@ function renderRechazados(c) {
       <div class="dep-grid">
         <div class="dep-field"><div class="dep-label">Oficina / Sección</div><div class="dep-val">${esc(p.oficina||'—')}</div></div>
         <div class="dep-field"><div class="dep-label">RI</div><div class="dep-val">${esc(p.ri||'—')}</div></div>
-        <div class="dep-field"><div class="dep-label">Vale / Memo</div><div class="dep-val">${esc(p.memo_vale||'—')}</div></div>
-        <div class="dep-field"><div class="dep-label">Presupuesto</div><div class="dep-val">${esc(p.presupuesto||'—')}</div></div>
-        <div class="dep-field dep-val full"><div class="dep-label">Detalle</div><div class="dep-val">${esc(p.detalle||'—')}</div></div>
-        ${p.observaciones ? `<div class="dep-field dep-val full"><div class="dep-label">Observaciones</div><div class="dep-val">${esc(p.observaciones)}</div></div>` : ''}
+        <div class="dep-field full"><div class="dep-label">Vale / Memo</div>${linkOTexto(p.memo_vale, 'Vale')}</div>
+        <div class="dep-field full"><div class="dep-label">Presupuesto</div>${linkOTexto(p.presupuesto, 'Presupuesto')}</div>
+        <div class="dep-field full"><div class="dep-label">Detalle</div><div class="dep-val">${esc(p.detalle||'—')}</div></div>
+        ${p.observaciones ? `<div class="dep-field full"><div class="dep-label">Observaciones (Col N)</div>${linkOTexto(p.observaciones, 'Observaciones')}</div>` : ''}
       </div>
       ${p.motivo ? `<div class="dep-motivo">⚠️ Motivo de rechazo: ${esc(p.motivo)}</div>` : ''}
+      <div class="dep-resubir">
+        <span style="font-size:11px;color:#94a3b8;font-weight:600">¿Querés resubir el vale o presupuesto?</span>
+        <a href="https://docs.google.com/forms" target="_blank" class="dep-btn-resubir">
+          <i data-lucide="upload"></i> Resubir documentación
+        </a>
+      </div>
     </div>
   `).join('');
   if (window.lucide) lucide.createIcons();
