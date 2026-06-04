@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('buscar-pib').addEventListener('input', () => renderCards('pib'));
   document.getElementById('filtro-estado-bhi').addEventListener('change', () => renderCards('bhi'));
   document.getElementById('filtro-estado-pib').addEventListener('change', () => renderCards('pib'));
+  document.getElementById('orden-bhi').addEventListener('change', () => renderCards('bhi'));
+  document.getElementById('orden-pib').addEventListener('change', () => renderCards('pib'));
 
   document.getElementById('modal-bg').addEventListener('click', e => {
     if (e.target === document.getElementById('modal-bg')) cerrarModal();
@@ -86,49 +88,45 @@ function letraRI(ri) {
 const ORDEN_ESTADO = { 'Iniciado': 0, 'Pase a Firma': 1, 'aprobado': 2, 'pase a fisico': 3, 'Pendiente': 4 };
 function ordenEstado(e) { return ORDEN_ESTADO[e] ?? 5; }
 
-function renderCards(tipo) {
-  const data    = tipo === 'bhi' ? dataBHI : dataPIB;
-  const q       = (document.getElementById(`buscar-${tipo}`).value || '').toLowerCase();
-  const filtroE = document.getElementById(`filtro-estado-${tipo}`).value;
-  const cont    = document.getElementById(`cards-${tipo}`);
+function fechaOrden(fecha) {
+  if (!fecha) return '';
+  const p = String(fecha).split('/');
+  return p.length === 3 ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}` : fecha;
+}
 
-  let lista = data.filter(s => {
-    const texto = `${s.id} ${s.ri} ${s.oficina} ${s.detalle} ${s.memo_vale}`.toLowerCase();
-    const okQ   = !q || texto.includes(q);
-    const okE   = !filtroE || s.estado_flujo === filtroE || s.estado === filtroE;
-    return okQ && okE;
-  });
-
-  if (lista.length === 0) {
-    cont.innerHTML = `<div class="empty"><i data-lucide="inbox"></i>Sin solicitudes</div>`;
-    if (window.lucide) lucide.createIcons();
-    return;
-  }
-
+function renderGrupos(lista, tipo, orden) {
+  const estadoEmoji = { 'Iniciado':'🟢', 'Pase a Firma':'🔵', 'aprobado':'✅', 'pase a fisico':'🟠', 'Pendiente':'⏳' };
   let html = '';
 
-  if (tipo === 'bhi') {
-    // BHI: agrupar solo por Sección
-    const porSec = agruparPor(lista, s => s.oficina || 'Sin sección');
-    Object.keys(porSec).sort().forEach(sec => {
-      html += `<div class="grp-estado">
-        <div class="grp-estado-lbl">🏢 ${sec} <span class="grp-count">${porSec[sec].length}</span></div>
-        <div class="cards">`;
-      porSec[sec].forEach(s => { html += cardHTML(s, tipo); });
+  if (orden === 'sector') {
+    const grupos = agruparPor(lista, s => s.oficina || 'Sin sección');
+    Object.keys(grupos).sort().forEach(k => {
+      html += `<div class="grp-estado"><div class="grp-estado-lbl">🏢 ${k} <span class="grp-count">${grupos[k].length}</span></div><div class="cards">`;
+      grupos[k].forEach(s => { html += cardHTML(s, tipo); });
+      html += `</div></div>`;
+    });
+
+  } else if (orden === 'fecha') {
+    const grupos = agruparPor(lista.sort((a,b) => fechaOrden(b.fecha).localeCompare(fechaOrden(a.fecha))), s => mesDesFecha(s.fecha));
+    Object.keys(grupos).sort((a,b) => b.localeCompare(a)).forEach(k => {
+      html += `<div class="grp-estado"><div class="grp-estado-lbl">📅 ${k} <span class="grp-count">${grupos[k].length}</span></div><div class="cards">`;
+      grupos[k].forEach(s => { html += cardHTML(s, tipo); });
+      html += `</div></div>`;
+    });
+
+  } else if (orden === 'ri') {
+    const grupos = agruparPor(lista, s => letraRI(s.ri));
+    Object.keys(grupos).sort().forEach(k => {
+      html += `<div class="grp-estado"><div class="grp-estado-lbl"><span class="grp-ri-lbl" style="font-size:13px">RI: ${k}</span> <span class="grp-count">${grupos[k].length}</span></div><div class="cards">`;
+      grupos[k].forEach(s => { html += cardHTML(s, tipo); });
       html += `</div></div>`;
     });
 
   } else {
-    // PIB: Estado → Mes → Sección → Letra RI
-    const estadoEmoji = { 'Iniciado':'🟢', 'Pase a Firma':'🔵', 'aprobado':'✅', 'pase a fisico':'🟠', 'Pendiente':'⏳' };
+    // estado (default PIB)
     const porEstado = agruparPor(lista, s => s.estado_flujo || s.estado || 'Pendiente');
-    const estadosOrdenados = Object.keys(porEstado).sort((a,b) => ordenEstado(a) - ordenEstado(b));
-
-    estadosOrdenados.forEach(estado => {
-      const emoji = estadoEmoji[estado] || '•';
-      html += `<div class="grp-estado">
-        <div class="grp-estado-lbl">${emoji} ${getEstadoLabel(estado)} <span class="grp-count">${porEstado[estado].length}</span></div>`;
-
+    Object.keys(porEstado).sort((a,b) => ordenEstado(a)-ordenEstado(b)).forEach(estado => {
+      html += `<div class="grp-estado"><div class="grp-estado-lbl">${estadoEmoji[estado]||'•'} ${getEstadoLabel(estado)} <span class="grp-count">${porEstado[estado].length}</span></div>`;
       const porMes = agruparPor(porEstado[estado], s => mesDesFecha(s.fecha));
       Object.keys(porMes).sort().forEach(mes => {
         html += `<div class="grp-mes"><div class="grp-mes-lbl">📅 ${mes}</div>`;
@@ -148,6 +146,30 @@ function renderCards(tipo) {
       html += `</div>`;
     });
   }
+  return html;
+}
+
+function renderCards(tipo) {
+  const data    = tipo === 'bhi' ? dataBHI : dataPIB;
+  const q       = (document.getElementById(`buscar-${tipo}`).value || '').toLowerCase();
+  const filtroE = document.getElementById(`filtro-estado-${tipo}`).value;
+  const cont    = document.getElementById(`cards-${tipo}`);
+
+  let lista = data.filter(s => {
+    const texto = `${s.id} ${s.ri} ${s.oficina} ${s.detalle} ${s.memo_vale}`.toLowerCase();
+    const okQ   = !q || texto.includes(q);
+    const okE   = !filtroE || s.estado_flujo === filtroE || s.estado === filtroE;
+    return okQ && okE;
+  });
+
+  if (lista.length === 0) {
+    cont.innerHTML = `<div class="empty"><i data-lucide="inbox"></i>Sin solicitudes</div>`;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  const orden = (document.getElementById(`orden-${tipo}`)?.value) || (tipo === 'bhi' ? 'sector' : 'estado');
+  let html = renderGrupos(lista, tipo, orden);
 
   cont.innerHTML = html;
   cont.querySelectorAll('.card').forEach(card => {
