@@ -61,9 +61,9 @@ function getSolicitudes() {
         presupuesto: r[4],
         aprobado:    r[5] === 'TRUE' || r[5] === 'VERDADERO' || r[5] === true,
         tipo_oc:     r[6],
-        num_suministro: r[7],   // Col H
-        estado_flujo:   r[8],   // Col I
-        rechazo:        r[9],   // Col J
+        num_suministro: r[7],   // Col H — N° Suministro
+        estado_flujo:   r[8],   // Col I — Estado flujo
+        rechazo:        r[9],   // Col J — Rechazos
         oc:             r[10],  // Col K — Orden de Compra
         oficina:        r[11],  // Col L
         detalle:        r[12],  // Col M
