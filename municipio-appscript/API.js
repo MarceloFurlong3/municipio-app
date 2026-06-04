@@ -33,6 +33,8 @@ function doPostAPI(e) {
   if (data.action === 'aprobar')        return respJSON(aprobarSolicitud(data.fila, data.valor));
   if (data.action === 'cambiarEstado')  return respJSON(cambiarEstado(data.fila, data.estado));
   if (data.action === 'rechazar')       return respJSON(rechazarSolicitud(data.fila, data.motivo));
+  if (data.action === 'setSuministro')  return respJSON(setCeldaSolicitud(data.fila, 8, data.valor));
+  if (data.action === 'setOrdenCompra') return respJSON(setCeldaSolicitud(data.fila, 11, data.valor));
   if (data.action === 'setOC')          return respJSON(setOrdenCompra(data.fila, data.oc, data.proveedor));
 
   return respJSON({ error: 'accion invalida' });
@@ -98,6 +100,15 @@ function getSolicitud(id) {
   } catch(err) {
     return { error: err.message };
   }
+}
+
+// ── ESCRIBIR CELDA GENÉRICA ───────────────────────────────────────────────────
+function setCeldaSolicitud(fila, col, valor) {
+  try {
+    var sh = getSpreadsheet().getSheetByName(HOJA_SOL);
+    sh.getRange(fila, col).setValue(valor);
+    return { ok: true };
+  } catch(err) { return { error: err.message }; }
 }
 
 // ── APROBAR (Col F = checkbox) ────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 // shared.js — Utilidades globales Municipio App
 // ══════════════════════════════════════════════════════════════════════════════
 
-const APPS_SCRIPT_URL = 'AKfycbyFLdwaQqjWUSIrpVHL_ECkY-1uFsgf2Duwt3AN1VelS-tavMbmx49Oew8hGwYE0zRt';
+const APPS_SCRIPT_URL = 'AKfycbzxCygphFeyT6x4s3eStxixxvbp0M4dk_WUKG1TgAuRgt2WujH8bA7O0VaJmXpo_bvS';
 const _BASE_URL = `https://script.google.com/macros/s/${APPS_SCRIPT_URL}/exec`;
 
 export async function apiFetch(action, params = {}) {

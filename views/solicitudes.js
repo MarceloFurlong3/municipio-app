@@ -197,11 +197,8 @@ function cardHTML(s, tipo) {
   const cardClass   = getCardClass(s);
 
   const chips = [];
-  if (s.ri)             chips.push(`<span class="card-chip">RI: ${esc(s.ri)}</span>`);
-  if (s.presupuesto)    chips.push(chipPresupuesto(s.presupuesto));
-  if (s.memo_vale)      chips.push(chipMemoVale(s.memo_vale, tipo === 'pib' ? 'Vale' : 'Memo'));
-  if (s.num_suministro) chips.push(`<span class="card-chip oc">N°Sum: ${esc(s.num_suministro)}</span>`);
-  if (s.oc)             chips.push(`<span class="card-chip" style="background:#ede9fe;color:#7c3aed">OC: ${esc(s.oc)}</span>`);
+  if (s.presupuesto) chips.push(chipPresupuesto(s.presupuesto));
+  if (s.memo_vale)   chips.push(chipMemoVale(s.memo_vale, tipo === 'pib' ? 'Vale' : 'Memo'));
 
   return `
     <div class="card ${cardClass}" data-fila="${s.fila}">
@@ -210,9 +207,23 @@ function cardHTML(s, tipo) {
         <span class="card-estado ${estadoClass}">${estadoLabel}</span>
         <span class="card-fecha">${esc(s.fecha)}</span>
       </div>
-      <div class="card-oficina">${esc(s.oficina || '—')}</div>
+      <div class="card-ri-grande">${esc(s.ri || '—')}</div>
       <div class="card-detalle">${esc(s.detalle || '—')}</div>
       ${chips.length ? `<div class="card-footer">${chips.join('')}</div>` : ''}
+      <div class="card-edit-row" onclick="event.stopPropagation()">
+        <div class="card-edit-field">
+          <label class="card-edit-lbl">N° Suministro</label>
+          <input class="card-edit-inp" data-fila="${s.fila}" data-campo="num_suministro"
+            value="${esc(s.num_suministro||'')}" placeholder="—"
+            onchange="guardarCampo(this)">
+        </div>
+        <div class="card-edit-field">
+          <label class="card-edit-lbl">Orden de Compra</label>
+          <input class="card-edit-inp" data-fila="${s.fila}" data-campo="oc"
+            value="${esc(s.oc||'')}" placeholder="—"
+            onchange="guardarCampo(this)">
+        </div>
+      </div>
     </div>`;
 }
 
@@ -388,3 +399,26 @@ function getCardClass(s) {
   if (e === 'Iniciado' || e === 'aprobado' || e === 'Pase a Firma') return 'en-proceso';
   return '';
 }
+
+// ── EDITAR SUMINISTRO / OC INLINE ────────────────────────────────────────────
+window.guardarCampo = async function(input) {
+  const fila  = parseInt(input.dataset.fila);
+  const campo = input.dataset.campo;
+  const valor = input.value.trim();
+
+  input.disabled = true;
+  try {
+    const r = await apiPost({ action: campo === 'oc' ? 'setOrdenCompra' : 'setSuministro', fila, valor });
+    if (r.error) throw new Error(r.error);
+    input.classList.add('guardado');
+    setTimeout(() => input.classList.remove('guardado'), 2000);
+    // actualizar caché local
+    const arr = [...dataBHI, ...dataPIB];
+    const sol = arr.find(s => s.fila === fila);
+    if (sol) sol[campo === 'oc' ? 'oc' : 'num_suministro'] = valor;
+    toast('✅ Guardado', 'ok');
+  } catch(e) {
+    toast('❌ ' + e.message, 'err');
+  }
+  input.disabled = false;
+};
