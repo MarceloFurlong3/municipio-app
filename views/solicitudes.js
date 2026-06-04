@@ -158,7 +158,7 @@ function renderCards(tipo) {
 
 function esURL(v) { return v && (String(v).startsWith('http://') || String(v).startsWith('https://')); }
 
-function chipMemo(v) {
+function chipMemoVale(v, etiqueta) {
   if (!v) return '';
   const partes = String(v).split(/[\s,\n]+/).filter(Boolean);
   const urls = partes.filter(p => esURL(p));
@@ -167,10 +167,10 @@ function chipMemo(v) {
   urls.forEach((url, i) => {
     html += `<a href="${url}" target="_blank" rel="noopener"
       class="card-chip warn card-chip-link"
-      onclick="event.stopPropagation()">📄 Memo${urls.length > 1 ? ' '+(i+1) : ''}</a>`;
+      onclick="event.stopPropagation()">📄 ${etiqueta}${urls.length > 1 ? ' '+(i+1) : ''}</a>`;
   });
-  if (texto) html += `<span class="card-chip warn">📄 Memo: ${esc(texto)}</span>`;
-  if (!urls.length && !texto) html = `<span class="card-chip warn">📄 Memo: ${esc(v)}</span>`;
+  if (texto) html += `<span class="card-chip warn">📄 ${etiqueta}: ${esc(texto)}</span>`;
+  if (!urls.length && !texto) html = `<span class="card-chip warn">📄 ${etiqueta}: ${esc(v)}</span>`;
   return html;
 }
 
@@ -199,7 +199,7 @@ function cardHTML(s, tipo) {
   const chips = [];
   if (s.ri)             chips.push(`<span class="card-chip">RI: ${esc(s.ri)}</span>`);
   if (s.presupuesto)    chips.push(chipPresupuesto(s.presupuesto));
-  if (s.memo_vale)      chips.push(chipMemo(s.memo_vale));
+  if (s.memo_vale)      chips.push(chipMemoVale(s.memo_vale, tipo === 'pib' ? 'Vale' : 'Memo'));
   if (s.num_suministro) chips.push(`<span class="card-chip oc">N°Sum: ${esc(s.num_suministro)}</span>`);
   if (s.oc)             chips.push(`<span class="card-chip" style="background:#ede9fe;color:#7c3aed">OC: ${esc(s.oc)}</span>`);
 
