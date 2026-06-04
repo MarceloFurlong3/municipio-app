@@ -72,6 +72,14 @@ function getHTML() { return `
 .dep-btn-resubir svg { width:14px; height:14px; }
 
 /* EMPTY */
+/* GRUPOS */
+.dep-grupo-mes { margin-bottom:20px; }
+.dep-grupo-mes-lbl { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:800; color:#0b1b35; padding:10px 0 6px; border-bottom:2px solid #0b1b35; margin-bottom:12px; }
+.dep-grupo-sec { margin-bottom:14px; padding-left:10px; border-left:3px solid #e4eaf5; }
+.dep-grupo-sec-lbl { font-size:12px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
+.dep-grupo-ri { margin-bottom:10px; }
+.dep-grupo-ri-lbl { font-size:10px; font-weight:800; color:#fff; background:#64748b; display:inline-block; padding:2px 10px; border-radius:20px; margin-bottom:6px; letter-spacing:.5px; }
+
 .dep-empty { text-align:center; padding:60px 20px; color:#94a3b8; font-size:13px; }
 
 /* SPINNER */
@@ -188,6 +196,36 @@ function esAnioActual(id) {
   return /-26$/.test(String(id).trim()) || /-2026$/.test(String(id).trim());
 }
 
+// Agrupar array por clave
+function agrupar(arr, fn) {
+  return arr.reduce((acc, item) => {
+    const k = fn(item) || 'Sin datos';
+    if (!acc[k]) acc[k] = [];
+    acc[k].push(item);
+    return acc;
+  }, {});
+}
+
+function mesDesFecha(fecha) {
+  if (!fecha) return 'Sin fecha';
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  // formato dd/mm/yyyy o mm/dd/yyyy
+  const p = String(fecha).split('/');
+  if (p.length === 3) {
+    const m = parseInt(p[1]) - 1;
+    return (meses[m] || 'Mes ' + p[1]) + ' ' + p[2];
+  }
+  return fecha;
+}
+
+function primeraLetraRI(ri) {
+  const s = String(ri || '').trim();
+  if (!s) return 'Sin RI';
+  // Toma solo la parte de letras iniciales (ej: "UP - 28/01" → "UP", "DEP" → "DEP")
+  const match = s.match(/^[A-ZÁÉÍÓÚa-záéíóú]+/);
+  return match ? match[0].toUpperCase() : s.charAt(0).toUpperCase();
+}
+
 // ── RENDER PEDIDOS ────────────────────────────────────────────────────────────
 function renderPedidos(c) {
   const q = (c.querySelector('#dep-buscar-ped').value || '').toLowerCase();
@@ -198,7 +236,30 @@ function renderPedidos(c) {
   const cont = c.querySelector('#dep-cards-ped');
   if (!lista.length) { cont.innerHTML = '<div class="dep-empty">Sin pedidos de este año</div>'; return; }
 
-  cont.innerHTML = lista.map(p => `
+  // Agrupar: Mes → Sección → Letra RI
+  const porMes = agrupar(lista, p => mesDesFecha(p.fecha));
+  let html = '';
+  Object.keys(porMes).sort().forEach(mes => {
+    html += `<div class="dep-grupo-mes"><div class="dep-grupo-mes-lbl">📅 ${mes}</div>`;
+    const porSeccion = agrupar(porMes[mes], p => p.seccion || 'Sin sección');
+    Object.keys(porSeccion).sort().forEach(sec => {
+      html += `<div class="dep-grupo-sec"><div class="dep-grupo-sec-lbl">🏢 ${sec}</div>`;
+      const porRI = agrupar(porSeccion[sec], p => primeraLetraRI(p.ri));
+      Object.keys(porRI).sort().forEach(letra => {
+        html += `<div class="dep-grupo-ri"><div class="dep-grupo-ri-lbl">RI: ${letra}</div><div class="dep-cards">`;
+        porRI[letra].forEach(p => { html += cardPedido(p); });
+        html += `</div></div>`;
+      });
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+  cont.innerHTML = html;
+  if (window.lucide) lucide.createIcons();
+}
+
+function cardPedido(p) {
+  return `
     <div class="dep-card">
       <div class="dep-card-hdr">
         <span class="dep-id">${esc(p.id)}</span>
@@ -206,18 +267,15 @@ function renderPedidos(c) {
         <span class="dep-fecha">${esc(p.fecha)}</span>
       </div>
       <div class="dep-grid">
-        <div class="dep-field"><div class="dep-label">Sección</div><div class="dep-val">${esc(p.seccion||'—')}</div></div>
         <div class="dep-field"><div class="dep-label">RI</div><div class="dep-val">${esc(p.ri||'—')}</div></div>
         <div class="dep-field"><div class="dep-label">N° Vale</div><div class="dep-val">${esc(p.num_vale||'—')}</div></div>
         <div class="dep-field"><div class="dep-label">N° OT</div><div class="dep-val">${esc(p.num_ot||'—')}</div></div>
         <div class="dep-field full"><div class="dep-label">Vale</div>${linkOTexto(p.vale, 'Vale')}</div>
         <div class="dep-field full"><div class="dep-label">Presupuesto</div>${linkOTexto(p.presupuesto, 'Presupuesto')}</div>
         <div class="dep-field full"><div class="dep-label">Detalle del pedido</div><div class="dep-val">${esc(p.detalle||'—')}</div></div>
-        ${p.observaciones ? `<div class="dep-field full"><div class="dep-label">Observaciones (Col N)</div>${linkOTexto(p.observaciones, 'Observaciones')}</div>` : ''}
+        ${p.observaciones ? `<div class="dep-field full"><div class="dep-label">Observaciones</div>${linkOTexto(p.observaciones, 'Observaciones')}</div>` : ''}
       </div>
-    </div>
-  `).join('');
-  if (window.lucide) lucide.createIcons();
+    </div>`;
 }
 
 // ── RENDER RECHAZADOS ─────────────────────────────────────────────────────────
