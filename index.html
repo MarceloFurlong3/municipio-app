@@ -177,6 +177,9 @@
     </div>
   </div>
 
+  <!-- DEPÓSITO -->
+  <div class="content" id="panel-deposito"></div>
+
   <div style="height:70px"></div>
 
   <nav class="bottom-nav">
@@ -187,6 +190,10 @@
     <button class="bottom-btn" id="nav-buscar">
       <i data-lucide="search"></i>
       Buscar
+    </button>
+    <button class="bottom-btn" id="nav-deposito">
+      <i data-lucide="package"></i>
+      Depósito
     </button>
   </nav>
 </div>
@@ -205,6 +212,27 @@
 </div>
 
 <script type="module" src="views/solicitudes.js"></script>
+<script type="module">
+  import { montarDeposito } from './views/deposito.js';
+
+  const btnDep = document.getElementById('nav-deposito');
+  const panelDep = document.getElementById('panel-deposito');
+  let depositoCargado = false;
+
+  btnDep.addEventListener('click', () => {
+    // Ocultar otros paneles
+    document.querySelectorAll('.content').forEach(p => p.classList.remove('activo'));
+    document.querySelectorAll('.bottom-btn').forEach(b => b.classList.remove('activo'));
+    panelDep.classList.add('activo');
+    btnDep.classList.add('activo');
+    // Montar solo la primera vez
+    if (!depositoCargado) {
+      depositoCargado = true;
+      montarDeposito(panelDep);
+    }
+    if (window.lucide) lucide.createIcons();
+  });
+</script>
 <script>
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>

@@ -19,8 +19,9 @@ function respJSON(data) {
 function doGetAPI(e) {
   const action = e.parameter.action;
 
-  if (action === 'getSolicitudes') return respJSON(getSolicitudes());
-  if (action === 'getSolicitud')   return respJSON(getSolicitud(e.parameter.id));
+  if (action === 'getSolicitudes')   return respJSON(getSolicitudes());
+  if (action === 'getSolicitud')     return respJSON(getSolicitud(e.parameter.id));
+  if (action === 'getDeposito')      return respJSON(getDeposito());
 
   return respJSON({ error: 'accion invalida' });
 }
@@ -117,6 +118,72 @@ function cambiarEstado(fila, estado) {
     sh.getRange(fila, 9).setValue(estado);
     return { ok: true };
   } catch(err) { return { error: err.message }; }
+}
+
+// ── VISTA DEPÓSITO ────────────────────────────────────────────────────────────
+// Trae PEDIDOS INTERNOS + filas rechazadas con PIB en col A
+function getDeposito() {
+  try {
+    var ss = getSpreadsheet();
+
+    // 1. PEDIDOS INTERNOS
+    // Cols: 1=ID, 2=Fecha, 3=Email, 4=RI, 5=FechaVale, 6=NumVale, 7=Seccion,
+    //       8=Observaciones, 9=Vale, 10=Detalle, 11=Presupuesto, 12=FechaPres, 13=NumOT
+    var shPI = ss.getSheetByName('PEDIDOS INTERNOS');
+    var pedidos = [];
+    if (shPI && shPI.getLastRow() >= 2) {
+      var rowsPI = shPI.getRange(2, 1, shPI.getLastRow() - 1, 13).getDisplayValues();
+      rowsPI.forEach(function(r, i) {
+        var id = String(r[0]).trim();
+        if (!id) return;
+        pedidos.push({
+          fila:         i + 2,
+          id:           id,
+          fecha:        r[1],
+          email:        r[2],
+          ri:           r[3],
+          fecha_vale:   r[4],
+          num_vale:     r[5],
+          seccion:      r[6],
+          observaciones: r[7],
+          vale:         r[8],
+          detalle:      r[9],
+          presupuesto:  r[10],
+          fecha_pres:   r[11],
+          num_ot:       r[12]
+        });
+      });
+    }
+
+    // 2. RECHAZADOS con PIB en col A
+    var shRec = ss.getSheetByName('Trabajos Rechazados');
+    var rechazados = [];
+    if (shRec && shRec.getLastRow() >= 2) {
+      var rowsRec = shRec.getRange(2, 1, shRec.getLastRow() - 1, 14).getDisplayValues();
+      rowsRec.forEach(function(r, i) {
+        var id = String(r[0]).trim();
+        if (!id || !id.toUpperCase().startsWith('PIB')) return;
+        rechazados.push({
+          fila:         i + 2,
+          id:           id,
+          fecha:        r[1],
+          ri:           r[2],
+          memo_vale:    r[3],
+          presupuesto:  r[4],
+          estado:       r[7],
+          estado_flujo: r[8],
+          motivo:       r[9],
+          oficina:      r[11],
+          detalle:      r[12],
+          observaciones: r[13]
+        });
+      });
+    }
+
+    return { pedidos: pedidos, rechazados: rechazados };
+  } catch(err) {
+    return { error: err.message };
+  }
 }
 
 // ── RECHAZAR (Col J) ──────────────────────────────────────────────────────────
