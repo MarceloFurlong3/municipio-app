@@ -215,22 +215,23 @@
 <script type="module">
   import { montarDeposito } from './views/deposito.js';
 
-  const btnDep = document.getElementById('nav-deposito');
-  const panelDep = document.getElementById('panel-deposito');
   let depositoCargado = false;
 
-  btnDep.addEventListener('click', () => {
-    // Ocultar otros paneles
-    document.querySelectorAll('.content').forEach(p => p.classList.remove('activo'));
-    document.querySelectorAll('.bottom-btn').forEach(b => b.classList.remove('activo'));
-    panelDep.classList.add('activo');
-    btnDep.classList.add('activo');
-    // Montar solo la primera vez
-    if (!depositoCargado) {
-      depositoCargado = true;
-      montarDeposito(panelDep);
-    }
-    if (window.lucide) lucide.createIcons();
+  document.addEventListener('DOMContentLoaded', () => {
+    const btnDep  = document.getElementById('nav-deposito');
+    const panelDep = document.getElementById('panel-deposito');
+
+    btnDep.addEventListener('click', () => {
+      document.querySelectorAll('.content').forEach(p => p.classList.remove('activo'));
+      document.querySelectorAll('.bottom-btn').forEach(b => b.classList.remove('activo'));
+      panelDep.classList.add('activo');
+      btnDep.classList.add('activo');
+      if (!depositoCargado) {
+        depositoCargado = true;
+        montarDeposito(panelDep);
+      }
+      if (window.lucide) lucide.createIcons();
+    });
   });
 </script>
 <script>
