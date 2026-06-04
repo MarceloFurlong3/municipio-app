@@ -158,6 +158,22 @@ function renderCards(tipo) {
 
 function esURL(v) { return v && (String(v).startsWith('http://') || String(v).startsWith('https://')); }
 
+function chipMemo(v) {
+  if (!v) return '';
+  const partes = String(v).split(/[\s,\n]+/).filter(Boolean);
+  const urls = partes.filter(p => esURL(p));
+  const texto = partes.filter(p => !esURL(p)).join(' ');
+  let html = '';
+  urls.forEach((url, i) => {
+    html += `<a href="${url}" target="_blank" rel="noopener"
+      class="card-chip warn card-chip-link"
+      onclick="event.stopPropagation()">📄 Memo${urls.length > 1 ? ' '+(i+1) : ''}</a>`;
+  });
+  if (texto) html += `<span class="card-chip warn">📄 Memo: ${esc(texto)}</span>`;
+  if (!urls.length && !texto) html = `<span class="card-chip warn">📄 Memo: ${esc(v)}</span>`;
+  return html;
+}
+
 function chipPresupuesto(v) {
   if (!v) return '';
   // Separar por espacios, saltos de línea o comas
@@ -184,7 +200,7 @@ function cardHTML(s, tipo) {
   if (s.ri)          chips.push(`<span class="card-chip">RI: ${esc(s.ri)}</span>`);
   if (s.presupuesto) chips.push(chipPresupuesto(s.presupuesto));
   if (s.suministro)  chips.push(`<span class="card-chip oc">OC: ${esc(s.suministro)}</span>`);
-  if (s.memo_vale)   chips.push(`<span class="card-chip warn">${esc(s.memo_vale)}</span>`);
+  if (s.memo_vale)   chips.push(chipMemo(s.memo_vale));
 
   return `
     <div class="card ${cardClass}" data-fila="${s.fila}">
