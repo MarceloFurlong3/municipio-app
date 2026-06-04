@@ -267,7 +267,7 @@ function cardPedido(p) {
         <span class="dep-fecha">${esc(p.fecha)}</span>
       </div>
       <div class="dep-grid">
-        <div class="dep-field"><div class="dep-label">RI</div><div class="dep-val">${esc(p.ri||'—')}</div></div>
+        <div class="dep-field"><div class="dep-label">RI completo</div><div class="dep-val" style="font-weight:800;color:#0b1b35">${esc(p.ri||'—')}</div></div>
         <div class="dep-field"><div class="dep-label">N° Vale</div><div class="dep-val">${esc(p.num_vale||'—')}</div></div>
         <div class="dep-field"><div class="dep-label">N° OT</div><div class="dep-val">${esc(p.num_ot||'—')}</div></div>
         <div class="dep-field full"><div class="dep-label">Vale</div>${linkOTexto(p.vale, 'Vale')}</div>
