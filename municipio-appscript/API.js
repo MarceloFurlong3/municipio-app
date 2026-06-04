@@ -61,13 +61,13 @@ function getSolicitudes() {
         presupuesto: r[4],
         aprobado:    r[5] === 'TRUE' || r[5] === 'VERDADERO' || r[5] === true,
         tipo_oc:     r[6],
-        estado:      r[7],
-        estado_flujo: r[8],
-        rechazo:     r[9],
-        suministro:  r[10],
-        oficina:     r[11],
-        detalle:     r[12],
-        observaciones: r[13]
+        num_suministro: r[7],   // Col H
+        estado_flujo:   r[8],   // Col I
+        rechazo:        r[9],   // Col J
+        oc:             r[10],  // Col K — Orden de Compra
+        oficina:        r[11],  // Col L
+        detalle:        r[12],  // Col M
+        observaciones:  r[13]   // Col N
       };
 
       if (id.toUpperCase().startsWith('BHI')) bhi.push(sol);

@@ -197,10 +197,11 @@ function cardHTML(s, tipo) {
   const cardClass   = getCardClass(s);
 
   const chips = [];
-  if (s.ri)          chips.push(`<span class="card-chip">RI: ${esc(s.ri)}</span>`);
-  if (s.presupuesto) chips.push(chipPresupuesto(s.presupuesto));
-  if (s.suministro)  chips.push(`<span class="card-chip oc">OC: ${esc(s.suministro)}</span>`);
-  if (s.memo_vale)   chips.push(chipMemo(s.memo_vale));
+  if (s.ri)             chips.push(`<span class="card-chip">RI: ${esc(s.ri)}</span>`);
+  if (s.presupuesto)    chips.push(chipPresupuesto(s.presupuesto));
+  if (s.memo_vale)      chips.push(chipMemo(s.memo_vale));
+  if (s.num_suministro) chips.push(`<span class="card-chip oc">N°Sum: ${esc(s.num_suministro)}</span>`);
+  if (s.oc)             chips.push(`<span class="card-chip" style="background:#ede9fe;color:#7c3aed">OC: ${esc(s.oc)}</span>`);
 
   return `
     <div class="card ${cardClass}" data-fila="${s.fila}">
@@ -236,7 +237,8 @@ function abrirModal(fila, tipo) {
       <div class="modal-field"><div class="modal-label">Presupuesto</div><div class="modal-val">${esc(sol.presupuesto||'—')}</div></div>
     </div>
     <div class="modal-row">
-      <div class="modal-field"><div class="modal-label">N° Suministro / OC</div><div class="modal-val">${esc(sol.suministro||'—')}</div></div>
+      <div class="modal-field"><div class="modal-label">N° Suministro</div><div class="modal-val">${esc(sol.num_suministro||'—')}</div></div>
+      <div class="modal-field"><div class="modal-label">Orden de Compra</div><div class="modal-val">${esc(sol.oc||'—')}</div></div>
       <div class="modal-field"><div class="modal-label">Aprobado carga</div><div class="modal-val">${sol.aprobado ? '✅ Sí' : '⏳ No'}</div></div>
     </div>
     <div class="modal-field modal-detalle-full"><div class="modal-label">Oficina / Sección</div><div class="modal-val">${esc(sol.oficina||'—')}</div></div>
