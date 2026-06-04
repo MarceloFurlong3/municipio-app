@@ -156,6 +156,18 @@ function renderCards(tipo) {
   if (window.lucide) lucide.createIcons();
 }
 
+function esURL(v) { return v && (String(v).startsWith('http://') || String(v).startsWith('https://')); }
+
+function chipPresupuesto(v) {
+  if (!v) return '';
+  if (esURL(v)) {
+    return `<a href="${v}" target="_blank" rel="noopener"
+      class="card-chip ok card-chip-link"
+      onclick="event.stopPropagation()">📎 Presupuesto</a>`;
+  }
+  return `<span class="card-chip ok">PRES: ${esc(v)}</span>`;
+}
+
 function cardHTML(s, tipo) {
   const estadoClass = getEstadoClass(s.estado_flujo || s.estado);
   const estadoLabel = getEstadoLabel(s.estado_flujo || s.estado);
@@ -163,7 +175,7 @@ function cardHTML(s, tipo) {
 
   const chips = [];
   if (s.ri)          chips.push(`<span class="card-chip">RI: ${esc(s.ri)}</span>`);
-  if (s.presupuesto) chips.push(`<span class="card-chip ok">PRES: ${esc(s.presupuesto)}</span>`);
+  if (s.presupuesto) chips.push(chipPresupuesto(s.presupuesto));
   if (s.suministro)  chips.push(`<span class="card-chip oc">OC: ${esc(s.suministro)}</span>`);
   if (s.memo_vale)   chips.push(`<span class="card-chip warn">${esc(s.memo_vale)}</span>`);
 
