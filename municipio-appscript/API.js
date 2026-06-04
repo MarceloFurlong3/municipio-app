@@ -1,4 +1,4 @@
-// ══════════════════════════════════════════════════════════════════════════════
+﻿// ══════════════════════════════════════════════════════════════════════════════
 // API.js — Endpoints REST para la PWA Municipio App
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -132,7 +132,7 @@ function getDeposito() {
     var shPI = ss.getSheetByName('PEDIDOS INTERNOS');
     var pedidos = [];
     if (shPI && shPI.getLastRow() >= 2) {
-      var rowsPI = shPI.getRange(2, 1, shPI.getLastRow() - 1, 13).getDisplayValues();
+      var lastPIRow = shPI.getLastRow(); var rowsPI = lastPIRow >= 2 ? shPI.getRange(2, 1, lastPIRow - 1, 13).getDisplayValues() : [];
       rowsPI.forEach(function(r, i) {
         var id = String(r[0]).trim();
         if (!id) return;
@@ -159,7 +159,7 @@ function getDeposito() {
     var shRec = ss.getSheetByName('Trabajos Rechazados');
     var rechazados = [];
     if (shRec && shRec.getLastRow() >= 2) {
-      var rowsRec = shRec.getRange(2, 1, shRec.getLastRow() - 1, 14).getDisplayValues();
+      var lastRecRow = shRec.getLastRow(); var rowsRec = lastRecRow >= 2 ? shRec.getRange(2, 1, lastRecRow - 1, 14).getDisplayValues() : [];
       rowsRec.forEach(function(r, i) {
         var id = String(r[0]).trim();
         if (!id || !id.toUpperCase().startsWith('PIB')) return;

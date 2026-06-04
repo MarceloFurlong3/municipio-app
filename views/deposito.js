@@ -174,11 +174,12 @@ function esURL(s) {
 
 function linkOTexto(val, label) {
   if (!val || val === '—') return `<div class="dep-val">—</div>`;
-  // Buscar todas las URLs dentro del texto
   const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const conLinks = String(val).replace(urlRegex, url =>
-    `<a href="${url}" target="_blank" rel="noopener" class="dep-link">${url.length > 40 ? '🔗 Ver ' + label : '🔗 ' + url}</a>`
-  );
+  const conLinks = String(val).replace(urlRegex, url => {
+    const texto = url.length > 50 ? '🔗 Ver ' + label : '🔗 ' + url;
+    return `<a href="${url}" target="_blank" rel="noopener" class="dep-link"
+      onclick="verificarLink(event,'${url}')">${texto}</a>`;
+  });
   return `<div class="dep-val">${conLinks}</div>`;
 }
 
@@ -255,3 +256,20 @@ function renderRechazados(c) {
   `).join('');
   if (window.lucide) lucide.createIcons();
 }
+
+// ── VERIFICAR LINK ────────────────────────────────────────────────────────────
+window.verificarLink = async function(e, url) {
+  const link = e.currentTarget;
+  if (link.dataset.verificado) return;
+  link.dataset.verificado = '1';
+  try {
+    await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+  } catch(err) {
+    e.preventDefault();
+    link.textContent = '⚠️ Link caído';
+    link.style.color = '#dc2626';
+    link.style.textDecoration = 'line-through';
+    link.style.cursor = 'default';
+    link.onclick = null;
+  }
+};
