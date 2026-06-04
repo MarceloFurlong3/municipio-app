@@ -58,6 +58,34 @@ async function cargar(forzar = false) {
 }
 
 // ── RENDER CARDS ──────────────────────────────────────────────────────────────
+// ── HELPERS AGRUPACIÓN ────────────────────────────────────────────────────────
+function agruparPor(arr, fn) {
+  return arr.reduce((acc, item) => {
+    const k = fn(item) || 'Sin datos';
+    if (!acc[k]) acc[k] = [];
+    acc[k].push(item);
+    return acc;
+  }, {});
+}
+
+function mesDesFecha(fecha) {
+  if (!fecha) return 'Sin fecha';
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const p = String(fecha).split('/');
+  if (p.length === 3) { const m = parseInt(p[1])-1; return (meses[m]||'Mes '+p[1])+' '+p[2]; }
+  return fecha;
+}
+
+function letraRI(ri) {
+  const s = String(ri||'').trim();
+  if (!s) return 'Sin RI';
+  const m = s.match(/^[A-ZÁÉÍÓÚa-záéíóú]+/);
+  return m ? m[0].toUpperCase() : s.charAt(0).toUpperCase();
+}
+
+const ORDEN_ESTADO = { 'Iniciado': 0, 'Pase a Firma': 1, 'aprobado': 2, 'pase a fisico': 3, 'Pendiente': 4 };
+function ordenEstado(e) { return ORDEN_ESTADO[e] ?? 5; }
+
 function renderCards(tipo) {
   const data    = tipo === 'bhi' ? dataBHI : dataPIB;
   const q       = (document.getElementById(`buscar-${tipo}`).value || '').toLowerCase();
@@ -77,7 +105,39 @@ function renderCards(tipo) {
     return;
   }
 
-  cont.innerHTML = lista.map(s => cardHTML(s, tipo)).join('');
+  // Agrupar: Estado → Mes → Sección → Letra RI
+  const estadoEmoji = { 'Iniciado':'🟢', 'Pase a Firma':'🔵', 'aprobado':'✅', 'pase a fisico':'🟠', 'Pendiente':'⏳' };
+  const porEstado = agruparPor(lista, s => s.estado_flujo || s.estado || 'Pendiente');
+  const estadosOrdenados = Object.keys(porEstado).sort((a,b) => ordenEstado(a) - ordenEstado(b));
+
+  let html = '';
+  estadosOrdenados.forEach(estado => {
+    const emoji = estadoEmoji[estado] || '•';
+    html += `<div class="grp-estado">
+      <div class="grp-estado-lbl">${emoji} ${getEstadoLabel(estado)} <span class="grp-count">${porEstado[estado].length}</span></div>`;
+
+    const porMes = agruparPor(porEstado[estado], s => mesDesFecha(s.fecha));
+    Object.keys(porMes).sort().forEach(mes => {
+      html += `<div class="grp-mes"><div class="grp-mes-lbl">📅 ${mes}</div>`;
+
+      const porSec = agruparPor(porMes[mes], s => s.oficina || 'Sin sección');
+      Object.keys(porSec).sort().forEach(sec => {
+        html += `<div class="grp-sec"><div class="grp-sec-lbl">🏢 ${sec}</div>`;
+
+        const porRI = agruparPor(porSec[sec], s => letraRI(s.ri));
+        Object.keys(porRI).sort().forEach(letra => {
+          html += `<div class="grp-ri"><span class="grp-ri-lbl">RI: ${letra}</span><div class="cards">`;
+          porRI[letra].forEach(s => { html += cardHTML(s, tipo); });
+          html += `</div></div>`;
+        });
+        html += `</div>`;
+      });
+      html += `</div>`;
+    });
+    html += `</div>`;
+  });
+
+  cont.innerHTML = html;
   cont.querySelectorAll('.card').forEach(card => {
     card.addEventListener('click', () => abrirModal(card.dataset.fila, tipo));
   });
