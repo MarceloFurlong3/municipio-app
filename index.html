@@ -132,6 +132,12 @@
     .bottom-btn.activo { color: #0b1b35; }
     .bottom-btn svg { width: 22px; height: 22px; }
 
+    /* ── FLOTA IFRAME ── */
+    #panel-flota { padding: 0; }
+    #panel-flota iframe { width: 100%; height: calc(100vh - 62px - 70px); border: none; display: block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     @media (min-width: 600px) {
       .content { max-width: 700px; margin: 0 auto; }
     }
@@ -211,6 +217,9 @@
   <!-- DEPÓSITO -->
   <div class="content" id="panel-deposito"></div>
 
+  <!-- FLOTA -->
+  <div class="content" id="panel-flota"></div>
+
   <div style="height:70px"></div>
 
   <nav class="bottom-nav">
@@ -225,6 +234,10 @@
     <button class="bottom-btn" id="nav-deposito">
       <i data-lucide="package"></i>
       Depósito
+    </button>
+    <button class="bottom-btn" id="nav-flota">
+      <i data-lucide="car"></i>
+      Flota
     </button>
   </nav>
 </div>
@@ -247,21 +260,36 @@
   import { montarDeposito } from './views/deposito.js';
 
   let depositoCargado = false;
+  let flotaCargada = false;
+
+  function activar(panelId, btnId) {
+    document.querySelectorAll('.content').forEach(p => p.classList.remove('activo'));
+    document.querySelectorAll('.bottom-btn').forEach(b => b.classList.remove('activo'));
+    document.getElementById(panelId).classList.add('activo');
+    document.getElementById(btnId).classList.add('activo');
+    if (window.lucide) lucide.createIcons();
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
-    const btnDep  = document.getElementById('nav-deposito');
+    const btnDep   = document.getElementById('nav-deposito');
     const panelDep = document.getElementById('panel-deposito');
+    const btnFlota  = document.getElementById('nav-flota');
+    const panelFlota = document.getElementById('panel-flota');
 
     btnDep.addEventListener('click', () => {
-      document.querySelectorAll('.content').forEach(p => p.classList.remove('activo'));
-      document.querySelectorAll('.bottom-btn').forEach(b => b.classList.remove('activo'));
-      panelDep.classList.add('activo');
-      btnDep.classList.add('activo');
+      activar('panel-deposito', 'nav-deposito');
       if (!depositoCargado) {
         depositoCargado = true;
         montarDeposito(panelDep);
       }
-      if (window.lucide) lucide.createIcons();
+    });
+
+    btnFlota.addEventListener('click', () => {
+      activar('panel-flota', 'nav-flota');
+      if (!flotaCargada) {
+        flotaCargada = true;
+        panelFlota.innerHTML = '<iframe src="https://marcelofurlong3.github.io/flota-municipal/" allowfullscreen></iframe>';
+      }
     });
   });
 </script>
