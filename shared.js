@@ -3,7 +3,10 @@
 // ══════════════════════════════════════════════════════════════════════════════
 
 const APPS_SCRIPT_URL = 'AKfycbzxCygphFeyT6x4s3eStxixxvbp0M4dk_WUKG1TgAuRgt2WujH8bA7O0VaJmXpo_bvS';
-const _BASE_URL = `https://script.google.com/macros/s/${APPS_SCRIPT_URL}/exec`;
+const _IS_LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const _BASE_URL = _IS_LOCAL
+  ? `${location.origin}/api-proxy`
+  : `https://script.google.com/macros/s/${APPS_SCRIPT_URL}/exec`;
 
 export async function apiFetch(action, params = {}) {
   const q = new URLSearchParams({ action, ...params }).toString();

@@ -59,8 +59,7 @@ async function cargar(forzar = false) {
   if (window.lucide) lucide.createIcons();
 }
 
-// ── RENDER CARDS ──────────────────────────────────────────────────────────────
-// ── HELPERS AGRUPACIÓN ────────────────────────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────────────────────────────────
 function agruparPor(arr, fn) {
   return arr.reduce((acc, item) => {
     const k = fn(item) || 'Sin datos';
@@ -85,7 +84,7 @@ function letraRI(ri) {
   return m ? m[0].toUpperCase() : s.charAt(0).toUpperCase();
 }
 
-const ORDEN_ESTADO = { 'Iniciado': 0, 'Pase a Firma': 1, 'aprobado': 2, 'pase a fisico': 3, 'Pendiente': 4 };
+const ORDEN_ESTADO = { 'Iniciado': 0, 'aprobado': 1, 'pase a fisico': 2, 'Pendiente': 3, 'Pase a Firma': 4 };
 function ordenEstado(e) { return ORDEN_ESTADO[e] ?? 5; }
 
 function fechaOrden(fecha) {
@@ -94,6 +93,146 @@ function fechaOrden(fecha) {
   return p.length === 3 ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}` : fecha;
 }
 
+function sortDesc(arr) {
+  return arr.slice().sort((a, b) => fechaOrden(b.fecha).localeCompare(fechaOrden(a.fecha)));
+}
+
+function sortMeses(keys) {
+  return keys.slice().sort((a, b) => {
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const parse = s => { const p = s.split(' '); return (parseInt(p[1])||0) * 100 + (meses.indexOf(p[0]) + 1); };
+    return parse(b) - parse(a);
+  });
+}
+
+function esURL(v) { return v && (String(v).startsWith('http://') || String(v).startsWith('https://')); }
+
+// ── CHIPS ─────────────────────────────────────────────────────────────────────
+function chipMemoVale(v, etiqueta) {
+  if (!v) return '';
+  const partes = String(v).split(/[\s,\n]+/).filter(Boolean);
+  const urls = partes.filter(p => esURL(p));
+  const texto = partes.filter(p => !esURL(p)).join(' ');
+  let html = '';
+  urls.forEach((url, i) => {
+    html += `<a href="${url}" target="_blank" rel="noopener"
+      class="card-chip warn card-chip-link"
+      onclick="event.stopPropagation()">📄 ${etiqueta}${urls.length > 1 ? ' '+(i+1) : ''}</a>`;
+  });
+  if (texto) html += `<span class="card-chip warn">📄 ${etiqueta}: ${esc(texto)}</span>`;
+  if (!urls.length && !texto) html = `<span class="card-chip warn">📄 ${etiqueta}: ${esc(v)}</span>`;
+  return html;
+}
+
+function chipPresupuesto(v) {
+  if (!v) return '';
+  const partes = String(v).split(/[\s,\n]+/).filter(Boolean);
+  const urls = partes.filter(p => esURL(p));
+  const texto = partes.filter(p => !esURL(p)).join(' ');
+  let html = '';
+  if (urls.length === 1) {
+    html += `<a href="${urls[0]}" target="_blank" rel="noopener"
+      class="card-chip ok card-chip-link" onclick="event.stopPropagation()">📎 Presupuesto</a>`;
+  } else if (urls.length > 1) {
+    html += `<span class="card-chip ok">📎 ${urls.length} presupuestos</span>`;
+  }
+  if (texto) html += `<span class="card-chip ok">📎 ${esc(texto)}</span>`;
+  return html;
+}
+
+// ── SELECTOR DE PRESUPUESTOS (para el modal) ──────────────────────────────────
+function renderSelectorPresupuesto(v) {
+  if (!v) return '<span style="color:#94a3b8">—</span>';
+  const partes = String(v).split(/[\s,\n]+/).filter(Boolean);
+  const urls = partes.filter(p => esURL(p));
+  const texto = partes.filter(p => !esURL(p)).join(' ');
+
+  if (urls.length === 0) return `<span style="font-size:12px;color:#0f172a">${esc(v)}</span>`;
+
+  if (urls.length === 1) {
+    return `<a href="${urls[0]}" target="_blank" rel="noopener"
+      style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#0b1b35;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">
+      📎 Ver presupuesto</a>`;
+  }
+
+  const options = urls.map((u, i) => `<option value="${u}">Presupuesto ${i+1}</option>`).join('');
+  return `
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="pres-sel" style="flex:1;padding:9px 10px;border:1.5px solid #e2e8f4;border-radius:8px;font-family:'Barlow',sans-serif;font-size:12px;background:#fff;outline:none;color:#0f172a">
+        ${options}
+      </select>
+      <button onclick="window.open(document.getElementById('pres-sel').value,'_blank')"
+        style="padding:9px 16px;background:#0b1b35;color:#fff;border:none;border-radius:8px;font-family:'Barlow',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+        Abrir ↗
+      </button>
+    </div>
+    ${texto ? `<div style="font-size:11px;color:#94a3b8;margin-top:4px">${esc(texto)}</div>` : ''}`;
+}
+
+// ── TIMELINE DE ESTADOS ───────────────────────────────────────────────────────
+function renderTimeline(sol) {
+  const pasos = [
+    { label: 'Iniciado',    fecha: sol.fecha_iniciado,  clase: 'estado-iniciado' },
+    { label: 'Aprobado',    fecha: sol.fecha_aprobado,  clase: 'estado-aprobado' },
+    { label: 'A Físico',    fecha: sol.fecha_fisico,    clase: 'estado-fisico'   },
+  ];
+  const tieneAlguna = pasos.some(p => p.fecha);
+  if (!tieneAlguna) return '';
+
+  const items = pasos.map(p => `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
+      <span class="card-estado ${p.fecha ? p.clase : ''}"
+        style="${p.fecha ? '' : 'opacity:.3;background:#f1f5f9;color:#94a3b8'}">
+        ${p.label}
+      </span>
+      <span style="font-size:10px;color:${p.fecha ? '#475569' : '#cbd5e1'};font-weight:600">
+        ${p.fecha || '—'}
+      </span>
+    </div>
+  `).join('<div style="width:1px;background:#e2e8f4;align-self:stretch;margin:4px 0"></div>');
+
+  return `
+    <div class="modal-field modal-detalle-full">
+      <div class="modal-label">Historial de estados</div>
+      <div style="display:flex;align-items:flex-start;gap:0;margin-top:6px;background:#f8fafd;border-radius:10px;padding:10px 8px;border:1px solid #e2e8f4">
+        ${items}
+      </div>
+    </div>`;
+}
+
+// ── CARD HTML (limpia — solo info, sin forms) ─────────────────────────────────
+function cardHTML(s, tipo) {
+  const estadoClass = getEstadoClass(s.estado_flujo || s.estado);
+  const estadoLabel = getEstadoLabel(s.estado_flujo || s.estado);
+  const cardClass   = getCardClass(s);
+
+  const chips = [];
+  if (s.presupuesto) chips.push(chipPresupuesto(s.presupuesto));
+  if (s.memo_vale)   chips.push(chipMemoVale(s.memo_vale, tipo === 'pib' ? 'Vale' : 'Memo'));
+
+  const rechazoHTML = s.rechazo
+    ? `<div style="display:flex;align-items:center;gap:6px;margin-top:8px;padding:6px 10px;background:#fff8f8;border-radius:8px;border:1px solid #fca5a5">
+        <span style="font-size:13px">⛔</span>
+        <span style="font-size:11px;font-weight:700;color:#dc2626">${esc(s.rechazo)}</span>
+       </div>`
+    : '';
+
+  return `
+    <div class="card ${cardClass}" data-fila="${s.fila}">
+      <div class="card-header">
+        <span class="card-id ${tipo}">${esc(s.id)}</span>
+        <span class="card-estado ${estadoClass}">${estadoLabel}</span>
+        <span class="card-fecha">${esc(s.fecha)}</span>
+      </div>
+      <div class="card-ri-grande">${esc(s.ri || '—')}</div>
+      <div class="card-oficina">${esc(s.oficina || '—')}</div>
+      <div class="card-detalle">${esc(s.detalle || '—')}</div>
+      ${chips.length ? `<div class="card-footer">${chips.join('')}</div>` : ''}
+      ${rechazoHTML}
+    </div>`;
+}
+
+// ── RENDER GRUPOS ─────────────────────────────────────────────────────────────
 function renderGrupos(lista, tipo, orden) {
   const estadoEmoji = { 'Iniciado':'🟢', 'Pase a Firma':'🔵', 'aprobado':'✅', 'pase a fisico':'🟠', 'Pendiente':'⏳' };
   let html = '';
@@ -102,33 +241,29 @@ function renderGrupos(lista, tipo, orden) {
     const grupos = agruparPor(lista, s => s.oficina || 'Sin sección');
     Object.keys(grupos).sort().forEach(k => {
       html += `<div class="grp-estado"><div class="grp-estado-lbl">🏢 ${k} <span class="grp-count">${grupos[k].length}</span></div><div class="cards">`;
-      grupos[k].forEach(s => { html += cardHTML(s, tipo); });
+      sortDesc(grupos[k]).forEach(s => { html += cardHTML(s, tipo); });
       html += `</div></div>`;
     });
-
   } else if (orden === 'fecha') {
-    const grupos = agruparPor(lista.sort((a,b) => fechaOrden(b.fecha).localeCompare(fechaOrden(a.fecha))), s => mesDesFecha(s.fecha));
-    Object.keys(grupos).sort((a,b) => b.localeCompare(a)).forEach(k => {
+    const grupos = agruparPor(sortDesc(lista), s => mesDesFecha(s.fecha));
+    sortMeses(Object.keys(grupos)).forEach(k => {
       html += `<div class="grp-estado"><div class="grp-estado-lbl">📅 ${k} <span class="grp-count">${grupos[k].length}</span></div><div class="cards">`;
       grupos[k].forEach(s => { html += cardHTML(s, tipo); });
       html += `</div></div>`;
     });
-
   } else if (orden === 'ri') {
     const grupos = agruparPor(lista, s => letraRI(s.ri));
     Object.keys(grupos).sort().forEach(k => {
       html += `<div class="grp-estado"><div class="grp-estado-lbl"><span class="grp-ri-lbl" style="font-size:13px">RI: ${k}</span> <span class="grp-count">${grupos[k].length}</span></div><div class="cards">`;
-      grupos[k].forEach(s => { html += cardHTML(s, tipo); });
+      sortDesc(grupos[k]).forEach(s => { html += cardHTML(s, tipo); });
       html += `</div></div>`;
     });
-
   } else {
-    // estado (default PIB)
     const porEstado = agruparPor(lista, s => s.estado_flujo || s.estado || 'Pendiente');
     Object.keys(porEstado).sort((a,b) => ordenEstado(a)-ordenEstado(b)).forEach(estado => {
       html += `<div class="grp-estado"><div class="grp-estado-lbl">${estadoEmoji[estado]||'•'} ${getEstadoLabel(estado)} <span class="grp-count">${porEstado[estado].length}</span></div>`;
-      const porMes = agruparPor(porEstado[estado], s => mesDesFecha(s.fecha));
-      Object.keys(porMes).sort().forEach(mes => {
+      const porMes = agruparPor(sortDesc(porEstado[estado]), s => mesDesFecha(s.fecha));
+      sortMeses(Object.keys(porMes)).forEach(mes => {
         html += `<div class="grp-mes"><div class="grp-mes-lbl">📅 ${mes}</div>`;
         const porSec = agruparPor(porMes[mes], s => s.oficina || 'Sin sección');
         Object.keys(porSec).sort().forEach(sec => {
@@ -158,7 +293,8 @@ function renderCards(tipo) {
   let lista = data.filter(s => {
     const texto = `${s.id} ${s.ri} ${s.oficina} ${s.detalle} ${s.memo_vale}`.toLowerCase();
     const okQ   = !q || texto.includes(q);
-    const okE   = !filtroE || s.estado_flujo === filtroE || s.estado === filtroE;
+    const estadoEfectivo = s.estado_flujo || s.estado || 'Pendiente';
+    const okE   = !filtroE || estadoEfectivo === filtroE;
     return okQ && okE;
   });
 
@@ -169,84 +305,11 @@ function renderCards(tipo) {
   }
 
   const orden = (document.getElementById(`orden-${tipo}`)?.value) || (tipo === 'bhi' ? 'sector' : 'estado');
-  let html = renderGrupos(lista, tipo, orden);
-
-  cont.innerHTML = html;
+  cont.innerHTML = renderGrupos(lista, tipo, orden);
   cont.querySelectorAll('.card').forEach(card => {
     card.addEventListener('click', () => abrirModal(card.dataset.fila, tipo));
   });
   if (window.lucide) lucide.createIcons();
-}
-
-function esURL(v) { return v && (String(v).startsWith('http://') || String(v).startsWith('https://')); }
-
-function chipMemoVale(v, etiqueta) {
-  if (!v) return '';
-  const partes = String(v).split(/[\s,\n]+/).filter(Boolean);
-  const urls = partes.filter(p => esURL(p));
-  const texto = partes.filter(p => !esURL(p)).join(' ');
-  let html = '';
-  urls.forEach((url, i) => {
-    html += `<a href="${url}" target="_blank" rel="noopener"
-      class="card-chip warn card-chip-link"
-      onclick="event.stopPropagation()">📄 ${etiqueta}${urls.length > 1 ? ' '+(i+1) : ''}</a>`;
-  });
-  if (texto) html += `<span class="card-chip warn">📄 ${etiqueta}: ${esc(texto)}</span>`;
-  if (!urls.length && !texto) html = `<span class="card-chip warn">📄 ${etiqueta}: ${esc(v)}</span>`;
-  return html;
-}
-
-function chipPresupuesto(v) {
-  if (!v) return '';
-  // Separar por espacios, saltos de línea o comas
-  const partes = String(v).split(/[\s,\n]+/).filter(Boolean);
-  const urls = partes.filter(p => esURL(p));
-  const texto = partes.filter(p => !esURL(p)).join(' ');
-
-  let html = '';
-  urls.forEach((url, i) => {
-    html += `<a href="${url}" target="_blank" rel="noopener"
-      class="card-chip ok card-chip-link"
-      onclick="event.stopPropagation()">📎 Pres. ${urls.length > 1 ? i+1 : ''}</a>`;
-  });
-  if (texto) html += `<span class="card-chip ok">PRES: ${esc(texto)}</span>`;
-  return html;
-}
-
-function cardHTML(s, tipo) {
-  const estadoClass = getEstadoClass(s.estado_flujo || s.estado);
-  const estadoLabel = getEstadoLabel(s.estado_flujo || s.estado);
-  const cardClass   = getCardClass(s);
-
-  const chips = [];
-  if (s.presupuesto) chips.push(chipPresupuesto(s.presupuesto));
-  if (s.memo_vale)   chips.push(chipMemoVale(s.memo_vale, tipo === 'pib' ? 'Vale' : 'Memo'));
-
-  return `
-    <div class="card ${cardClass}" data-fila="${s.fila}">
-      <div class="card-header">
-        <span class="card-id ${tipo}">${esc(s.id)}</span>
-        <span class="card-estado ${estadoClass}">${estadoLabel}</span>
-        <span class="card-fecha">${esc(s.fecha)}</span>
-      </div>
-      <div class="card-ri-grande">${esc(s.ri || '—')}</div>
-      <div class="card-detalle">${esc(s.detalle || '—')}</div>
-      ${chips.length ? `<div class="card-footer">${chips.join('')}</div>` : ''}
-      <div class="card-edit-row" onclick="event.stopPropagation()">
-        <div class="card-edit-field">
-          <label class="card-edit-lbl">N° Suministro</label>
-          <input class="card-edit-inp" data-fila="${s.fila}" data-campo="num_suministro"
-            value="${esc(s.num_suministro||'')}" placeholder="—"
-            onchange="guardarCampo(this)">
-        </div>
-        <div class="card-edit-field">
-          <label class="card-edit-lbl">Orden de Compra</label>
-          <input class="card-edit-inp" data-fila="${s.fila}" data-campo="oc"
-            value="${esc(s.oc||'')}" placeholder="—"
-            onchange="guardarCampo(this)">
-        </div>
-      </div>
-    </div>`;
 }
 
 // ── MODAL ─────────────────────────────────────────────────────────────────────
@@ -256,28 +319,81 @@ function abrirModal(fila, tipo) {
   if (!sol) return;
   solicitudActual = { ...sol, tipo };
 
-  document.getElementById('modal-id').textContent   = sol.id;
-  document.getElementById('modal-id').className     = `modal-id ${tipo}`;
-  document.getElementById('modal-fecha').textContent = sol.fecha;
+  document.getElementById('modal-id').textContent    = sol.id;
+  document.getElementById('modal-id').className      = `modal-id ${tipo}`;
+  document.getElementById('modal-fecha').textContent  = sol.fecha;
 
   document.getElementById('modal-body').innerHTML = `
     <div class="modal-row">
-      <div class="modal-field"><div class="modal-label">RI</div><div class="modal-val">${esc(sol.ri||'—')}</div></div>
-      <div class="modal-field"><div class="modal-label">Estado</div><div class="modal-val"><span class="card-estado ${getEstadoClass(sol.estado_flujo||sol.estado)}">${getEstadoLabel(sol.estado_flujo||sol.estado)}</span></div></div>
+      <div class="modal-field">
+        <div class="modal-label">RI</div>
+        <div class="modal-val" style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800">${esc(sol.ri||'—')}</div>
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">Estado</div>
+        <div class="modal-val"><span class="card-estado ${getEstadoClass(sol.estado_flujo||sol.estado)}">${getEstadoLabel(sol.estado_flujo||sol.estado)}</span></div>
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">Aprobado</div>
+        <div class="modal-val">${sol.aprobado ? '✅ Sí' : '⏳ No'}</div>
+      </div>
     </div>
+
+    <div class="modal-field modal-detalle-full">
+      <div class="modal-label">Oficina / Sección</div>
+      <div class="modal-val">${esc(sol.oficina||'—')}</div>
+    </div>
+
+    <div class="modal-field modal-detalle-full">
+      <div class="modal-label">Detalle del pedido</div>
+      <div class="modal-val" style="white-space:pre-wrap">${esc(sol.detalle||'—')}</div>
+    </div>
+
     <div class="modal-row">
-      <div class="modal-field"><div class="modal-label">Memo / Vale</div><div class="modal-val">${esc(sol.memo_vale||'—')}</div></div>
-      <div class="modal-field"><div class="modal-label">Presupuesto</div><div class="modal-val">${esc(sol.presupuesto||'—')}</div></div>
+      <div class="modal-field">
+        <div class="modal-label">Memo / Vale</div>
+        <div class="modal-val">${chipMemoVale(sol.memo_vale, tipo==='pib'?'Vale':'Memo') || esc(sol.memo_vale||'—')}</div>
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">Presupuesto</div>
+        <div class="modal-val">${renderSelectorPresupuesto(sol.presupuesto)}</div>
+      </div>
     </div>
+
     <div class="modal-row">
-      <div class="modal-field"><div class="modal-label">N° Suministro</div><div class="modal-val">${esc(sol.num_suministro||'—')}</div></div>
-      <div class="modal-field"><div class="modal-label">Orden de Compra</div><div class="modal-val">${esc(sol.oc||'—')}</div></div>
-      <div class="modal-field"><div class="modal-label">Aprobado carga</div><div class="modal-val">${sol.aprobado ? '✅ Sí' : '⏳ No'}</div></div>
+      <div class="modal-field">
+        <div class="modal-label">N° Suministro</div>
+        <input class="card-edit-inp" id="modal-suministro" value="${esc(sol.num_suministro||'')}" placeholder="—"
+          style="width:100%;margin-top:4px"
+          onchange="window._guardarSuministroModal(this)">
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">Orden de Compra</div>
+        <input class="card-edit-inp" id="modal-oc" value="${esc(sol.oc||'')}" placeholder="—"
+          style="width:100%;margin-top:4px"
+          onchange="window._guardarOCModal(this)">
+      </div>
     </div>
-    <div class="modal-field modal-detalle-full"><div class="modal-label">Oficina / Sección</div><div class="modal-val">${esc(sol.oficina||'—')}</div></div>
-    <div class="modal-field modal-detalle-full"><div class="modal-label">Detalle del pedido</div><div class="modal-val">${esc(sol.detalle||'—')}</div></div>
-    <div class="modal-field modal-detalle-full"><div class="modal-label">Observaciones</div><div class="modal-val">${esc(sol.observaciones||'—')}</div></div>
-    ${sol.rechazo ? `<div class="modal-field modal-detalle-full"><div class="modal-label" style="color:#dc2626">Rechazo</div><div class="modal-val" style="color:#dc2626">${esc(sol.rechazo)}</div></div>` : ''}
+
+    ${sol.observaciones ? `
+    <div class="modal-field modal-detalle-full">
+      <div class="modal-label">Observaciones</div>
+      <div class="modal-val" style="white-space:pre-wrap">${esc(sol.observaciones)}</div>
+    </div>` : ''}
+
+    ${sol.rechazo ? `
+    <div class="modal-field modal-detalle-full">
+      <div class="modal-label" style="color:#dc2626">Motivo de rechazo</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;padding:10px 12px;background:#fff8f8;border-radius:10px;border:1.5px solid #fca5a5">
+        <span style="font-size:13px;font-weight:700;color:#dc2626">⛔ ${esc(sol.rechazo)}</span>
+        <button onclick="window._limpiarRechazo()"
+          style="padding:5px 12px;background:#fff;border:1.5px solid #fca5a5;border-radius:7px;font-size:11px;font-weight:700;color:#dc2626;cursor:pointer">
+          Limpiar
+        </button>
+      </div>
+    </div>` : ''}
+
+    ${renderTimeline(sol)}
   `;
 
   renderAcciones(sol);
@@ -291,24 +407,19 @@ function cerrarModal() {
 }
 
 function renderAcciones(sol) {
-  const cont = document.getElementById('modal-acciones');
-  const flujo = sol.estado_flujo || '';
+  const cont   = document.getElementById('modal-acciones');
+  const flujo  = sol.estado_flujo || '';
   const aprobado = sol.aprobado;
-  const btns = [];
+  const btns   = [];
 
   btns.push(`<div class="modal-acciones-title">Acciones</div>`);
 
-  // Aprobar carga (col F)
   if (!aprobado) {
     btns.push(`<button class="btn-accion btn-aprobar" onclick="window._aprobar()"><i data-lucide="check-circle"></i>Aprobar carga</button>`);
   }
 
-  // Flujo de estados (col I) — solo si está aprobado
   if (aprobado) {
-    if (!flujo || flujo === 'Pendiente') {
-      btns.push(`<button class="btn-accion btn-firma" onclick="window._cambiarEstado('Pase a Firma')"><i data-lucide="file-signature"></i>Pase a Firma</button>`);
-    }
-    if (flujo === 'Pase a Firma') {
+    if (!flujo || flujo === 'Pendiente' || flujo === 'Pase a Firma') {
       btns.push(`<button class="btn-accion btn-iniciado" onclick="window._cambiarEstado('Iniciado')"><i data-lucide="play-circle"></i>Marcar Iniciado</button>`);
     }
     if (flujo === 'Iniciado') {
@@ -319,14 +430,16 @@ function renderAcciones(sol) {
     }
   }
 
-  // Rechazos (col J)
   if (flujo !== 'pase a fisico') {
     btns.push(`
       <div style="display:flex;gap:8px;margin-top:4px">
         <button class="btn-accion btn-rechazar" style="flex:1" onclick="window._rechazar('Falta Memo')"><i data-lucide="file-x"></i>Sin Memo</button>
         <button class="btn-accion btn-rechazar" style="flex:1" onclick="window._rechazar('Falta Presupuesto')"><i data-lucide="file-x-2"></i>Sin Pres.</button>
       </div>
-      <button class="btn-accion btn-rechazar" onclick="window._rechazarMotivo()"><i data-lucide="x-circle"></i>Rechazar con motivo</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-accion btn-rechazar" style="flex:1" onclick="window._rechazar('Actualizar Presupuesto')"><i data-lucide="refresh-ccw"></i>Actualizar Pres.</button>
+        <button class="btn-accion btn-rechazar" style="flex:1" onclick="window._rechazarMotivo()"><i data-lucide="x-circle"></i>Otro motivo</button>
+      </div>
     `);
   }
 
@@ -335,8 +448,23 @@ function renderAcciones(sol) {
 }
 
 // ── ACCIONES ──────────────────────────────────────────────────────────────────
+function setBtnLoading(loading) {
+  document.querySelectorAll('#modal-acciones .btn-accion').forEach(b => {
+    if (loading) {
+      b._orig = b.innerHTML;
+      b.innerHTML = '<span style="display:inline-block;animation:spin .7s linear infinite">⏳</span> Cargando...';
+      b.disabled = true;
+    } else {
+      if (b._orig) b.innerHTML = b._orig;
+      b.disabled = false;
+    }
+  });
+}
+
 window._aprobar = async function() {
   if (!solicitudActual) return;
+  const tipo = solicitudActual.tipo;
+  setBtnLoading(true);
   try {
     const r = await apiPost({ action: 'aprobar', fila: solicitudActual.fila, valor: true });
     if (r.error) throw new Error(r.error);
@@ -344,26 +472,46 @@ window._aprobar = async function() {
     solicitudActual.aprobado = true;
     actualizarLocal(solicitudActual);
     cerrarModal();
-    renderCards(solicitudActual.tipo);
-  } catch(e) { toast('❌ ' + e.message, 'err'); }
+    renderCards(tipo);
+  } catch(e) { setBtnLoading(false); toast('❌ ' + e.message, 'err'); }
 };
 
 window._cambiarEstado = async function(estado) {
   if (!solicitudActual) return;
+  const tipo = solicitudActual.tipo;
+
+  if (estado === 'Iniciado' && !solicitudActual.num_suministro) {
+    const inp = document.getElementById('modal-suministro');
+    const num = inp ? inp.value.trim() : '';
+    if (!num) {
+      toast('⚠️ Ingresá el N° de Suministro antes de continuar', 'err');
+      if (inp) inp.focus();
+      return;
+    }
+    solicitudActual.num_suministro = num;
+    setBtnLoading(true);
+    const rs = await apiPost({ action: 'setSuministro', fila: solicitudActual.fila, valor: num });
+    if (rs.error) { setBtnLoading(false); toast('❌ Error al guardar suministro', 'err'); return; }
+  } else {
+    setBtnLoading(true);
+  }
+
   try {
     const r = await apiPost({ action: 'cambiarEstado', fila: solicitudActual.fila, estado });
     if (r.error) throw new Error(r.error);
-    toast('✅ Estado: ' + estado, 'ok');
+    toast('✅ ' + getEstadoLabel(estado), 'ok');
     solicitudActual.estado_flujo = estado;
     actualizarLocal(solicitudActual);
     cerrarModal();
-    renderCards(solicitudActual.tipo);
-  } catch(e) { toast('❌ ' + e.message, 'err'); }
+    renderCards(tipo);
+  } catch(e) { setBtnLoading(false); toast('❌ ' + e.message, 'err'); }
 };
 
 window._rechazar = async function(motivo) {
   if (!solicitudActual) return;
   if (!confirm(`¿Rechazar por "${motivo}"?`)) return;
+  const tipo = solicitudActual.tipo;
+  setBtnLoading(true);
   try {
     const r = await apiPost({ action: 'rechazar', fila: solicitudActual.fila, motivo });
     if (r.error) throw new Error(r.error);
@@ -371,29 +519,81 @@ window._rechazar = async function(motivo) {
     solicitudActual.rechazo = motivo;
     actualizarLocal(solicitudActual);
     cerrarModal();
-    renderCards(solicitudActual.tipo);
-  } catch(e) { toast('❌ ' + e.message, 'err'); }
+    renderCards(tipo);
+  } catch(e) { setBtnLoading(false); toast('❌ ' + e.message, 'err'); }
 };
 
 window._rechazarMotivo = async function() {
   const motivo = prompt('Escribí el motivo del rechazo:');
-  if (!motivo) return;
+  if (!motivo || !motivo.trim()) return;
   if (!solicitudActual) return;
+  const tipo = solicitudActual.tipo;
+  setBtnLoading(true);
   try {
-    const r = await apiPost({ action: 'rechazar', fila: solicitudActual.fila, motivo: 'Motivo Escrito' });
+    // Bug fix: guardar el texto real en observaciones (Col N) + rechazar con 'Motivo Escrito'
+    const r = await apiPost({ action: 'rechazar', fila: solicitudActual.fila, motivo: 'Motivo Escrito', detalle: motivo.trim() });
     if (r.error) throw new Error(r.error);
     toast('Rechazado', 'err');
-    solicitudActual.rechazo = motivo;
+    solicitudActual.rechazo = 'Motivo Escrito';
+    solicitudActual.observaciones = motivo.trim();
     actualizarLocal(solicitudActual);
     cerrarModal();
-    renderCards(solicitudActual.tipo);
+    renderCards(tipo);
+  } catch(e) { setBtnLoading(false); toast('❌ ' + e.message, 'err'); }
+};
+
+window._limpiarRechazo = async function() {
+  if (!solicitudActual) return;
+  if (!confirm('¿Limpiar el rechazo y reactivar la solicitud?')) return;
+  const tipo = solicitudActual.tipo;
+  setBtnLoading(true);
+  try {
+    const r = await apiPost({ action: 'limpiarRechazo', fila: solicitudActual.fila });
+    if (r.error) throw new Error(r.error);
+    toast('✅ Rechazo limpiado', 'ok');
+    solicitudActual.rechazo = '';
+    actualizarLocal(solicitudActual);
+    cerrarModal();
+    renderCards(tipo);
+  } catch(e) { setBtnLoading(false); toast('❌ ' + e.message, 'err'); }
+};
+
+window._guardarSuministroModal = async function(input) {
+  if (!solicitudActual) return;
+  const valor = input.value.trim();
+  input.disabled = true;
+  try {
+    const r = await apiPost({ action: 'setSuministro', fila: solicitudActual.fila, valor });
+    if (r.error) throw new Error(r.error);
+    solicitudActual.num_suministro = valor;
+    actualizarLocal(solicitudActual);
+    input.classList.add('guardado');
+    setTimeout(() => input.classList.remove('guardado'), 2000);
+    toast('✅ Suministro guardado', 'ok');
   } catch(e) { toast('❌ ' + e.message, 'err'); }
+  input.disabled = false;
+};
+
+window._guardarOCModal = async function(input) {
+  if (!solicitudActual) return;
+  const valor = input.value.trim();
+  input.disabled = true;
+  try {
+    const r = await apiPost({ action: 'setOrdenCompra', fila: solicitudActual.fila, valor });
+    if (r.error) throw new Error(r.error);
+    solicitudActual.oc = valor;
+    actualizarLocal(solicitudActual);
+    input.classList.add('guardado');
+    setTimeout(() => input.classList.remove('guardado'), 2000);
+    toast('✅ OC guardada', 'ok');
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
+  input.disabled = false;
 };
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function actualizarLocal(sol) {
-  const arr  = sol.tipo === 'bhi' ? dataBHI : dataPIB;
-  const idx  = arr.findIndex(s => s.fila === sol.fila);
+  const arr = sol.tipo === 'bhi' ? dataBHI : dataPIB;
+  const idx = arr.findIndex(s => s.fila === sol.fila);
   if (idx >= 0) arr[idx] = { ...sol };
 }
 
@@ -403,7 +603,6 @@ function getEstadoClass(e) {
   if (e === 'Iniciado')       return 'estado-iniciado';
   if (e === 'aprobado')       return 'estado-aprobado';
   if (e === 'pase a fisico')  return 'estado-fisico';
-  if (e.toLowerCase().includes('rechazo') || e.toLowerCase().includes('falta')) return 'estado-rechazado';
   return 'estado-pendiente';
 }
 
@@ -421,26 +620,3 @@ function getCardClass(s) {
   if (e === 'Iniciado' || e === 'aprobado' || e === 'Pase a Firma') return 'en-proceso';
   return '';
 }
-
-// ── EDITAR SUMINISTRO / OC INLINE ────────────────────────────────────────────
-window.guardarCampo = async function(input) {
-  const fila  = parseInt(input.dataset.fila);
-  const campo = input.dataset.campo;
-  const valor = input.value.trim();
-
-  input.disabled = true;
-  try {
-    const r = await apiPost({ action: campo === 'oc' ? 'setOrdenCompra' : 'setSuministro', fila, valor });
-    if (r.error) throw new Error(r.error);
-    input.classList.add('guardado');
-    setTimeout(() => input.classList.remove('guardado'), 2000);
-    // actualizar caché local
-    const arr = [...dataBHI, ...dataPIB];
-    const sol = arr.find(s => s.fila === fila);
-    if (sol) sol[campo === 'oc' ? 'oc' : 'num_suministro'] = valor;
-    toast('✅ Guardado', 'ok');
-  } catch(e) {
-    toast('❌ ' + e.message, 'err');
-  }
-  input.disabled = false;
-};

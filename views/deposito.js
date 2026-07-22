@@ -56,6 +56,9 @@ function getHTML() { return `
 .dep-fecha { font-size:11px; color:#94a3b8; margin-left:auto; }
 .dep-estado { font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; }
 .dep-est-pendiente { background:#fef9c3; color:#a16207; }
+.dep-est-iniciado  { background:#dcfce7; color:#15803d; }
+.dep-est-aprobado  { background:#bbf7d0; color:#166534; }
+.dep-est-fisico    { background:#fed7aa; color:#c2410c; }
 .dep-est-rechazado { background:#fecaca; color:#dc2626; }
 
 .dep-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -115,7 +118,16 @@ function getHTML() { return `
         <i data-lucide="refresh-cw"></i> Actualizar
       </button>
     </div>
-    <input type="search" class="dep-search" id="dep-buscar-ped" placeholder="🔍 Buscar por ID, sección, detalle...">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      <input type="search" class="dep-search" id="dep-buscar-ped" placeholder="🔍 Buscar por ID, RI, detalle..." style="margin-bottom:0;flex:1;min-width:160px">
+      <select class="dep-search" id="dep-filtro-estado" style="margin-bottom:0;flex:0 0 auto;width:auto;padding:10px 10px">
+        <option value="">Todos los estados</option>
+        <option value="Pendiente">Pendiente</option>
+        <option value="Iniciado">Iniciado</option>
+        <option value="aprobado">Aprobado</option>
+        <option value="pase a fisico">Pase a Físico</option>
+      </select>
+    </div>
     <div class="dep-cards" id="dep-cards-ped">
       <div class="dep-spin">⏳ Cargando pedidos...</div>
     </div>
@@ -145,6 +157,7 @@ function bindEventos(c) {
   c.querySelector('#dep-tab-rechazados').addEventListener('click', () => switchTab('rechazados', c));
   c.querySelector('#dep-refresh').addEventListener('click', () => cargar(c, true));
   c.querySelector('#dep-buscar-ped').addEventListener('input', () => renderPedidos(c));
+  c.querySelector('#dep-filtro-estado').addEventListener('change', () => renderPedidos(c));
   c.querySelector('#dep-buscar-rec').addEventListener('input', () => renderRechazados(c));
 }
 
@@ -200,6 +213,20 @@ function linkOTexto(val, label) {
   return html;
 }
 
+function fechaOrd(fecha) {
+  if (!fecha) return '';
+  const p = String(fecha).split('/');
+  return p.length === 3 ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}` : fecha;
+}
+
+function sortMesesDep(keys) {
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  return keys.slice().sort((a, b) => {
+    const parse = s => { const p = s.split(' '); return (parseInt(p[1])||0) * 100 + (meses.indexOf(p[0]) + 1); };
+    return parse(b) - parse(a);
+  });
+}
+
 function esAnioActual(id) {
   // Acepta IDs que terminen en -26 o -2026
   return /-26$/.test(String(id).trim()) || /-2026$/.test(String(id).trim());
@@ -237,20 +264,26 @@ function primeraLetraRI(ri) {
 
 // ── RENDER PEDIDOS ────────────────────────────────────────────────────────────
 function renderPedidos(c) {
-  const q = (c.querySelector('#dep-buscar-ped').value || '').toLowerCase();
-  const lista = pedidosCache.filter(p =>
-    esAnioActual(p.id) &&
-    `${p.id} ${p.seccion} ${p.detalle} ${p.ri} ${p.vale}`.toLowerCase().includes(q)
-  );
+  const q       = (c.querySelector('#dep-buscar-ped').value || '').toLowerCase();
+  const filtroE = c.querySelector('#dep-filtro-estado').value;
+  const lista = pedidosCache.filter(p => {
+    const estadoEfectivo = p.estado_flujo || 'Pendiente';
+    const okE = !filtroE || estadoEfectivo === filtroE;
+    const okQ = !q || `${p.id} ${p.oficina} ${p.detalle} ${p.ri} ${p.memo_vale}`.toLowerCase().includes(q);
+    return esAnioActual(p.id) && okE && okQ;
+  });
   const cont = c.querySelector('#dep-cards-ped');
   if (!lista.length) { cont.innerHTML = '<div class="dep-empty">Sin pedidos de este año</div>'; return; }
 
+  // Ordenar de más nuevo a más viejo
+  const listaOrd = lista.slice().sort((a, b) => fechaOrd(b.fecha).localeCompare(fechaOrd(a.fecha)));
+
   // Agrupar: Mes → Sección → Letra RI
-  const porMes = agrupar(lista, p => mesDesFecha(p.fecha));
+  const porMes = agrupar(listaOrd, p => mesDesFecha(p.fecha));
   let html = '';
-  Object.keys(porMes).sort().forEach(mes => {
+  sortMesesDep(Object.keys(porMes)).forEach(mes => {
     html += `<div class="dep-grupo-mes"><div class="dep-grupo-mes-lbl">📅 ${mes}</div>`;
-    const porSeccion = agrupar(porMes[mes], p => p.seccion || 'Sin sección');
+    const porSeccion = agrupar(porMes[mes], p => p.oficina || p.seccion || 'Sin sección');
     Object.keys(porSeccion).sort().forEach(sec => {
       html += `<div class="dep-grupo-sec"><div class="dep-grupo-sec-lbl">🏢 ${sec}</div>`;
       const porRI = agrupar(porSeccion[sec], p => primeraLetraRI(p.ri));
@@ -267,22 +300,38 @@ function renderPedidos(c) {
   if (window.lucide) lucide.createIcons();
 }
 
+function estadoLabel(e) {
+  if (!e || e === 'Pendiente') return 'Pendiente';
+  if (e === 'pase a fisico') return 'Pase a Físico';
+  if (e === 'aprobado') return 'Aprobado';
+  return e;
+}
+function estadoClass(e) {
+  if (!e || e === 'Pendiente') return 'dep-est-pendiente';
+  if (e === 'Iniciado') return 'dep-est-iniciado';
+  if (e === 'aprobado') return 'dep-est-aprobado';
+  if (e === 'pase a fisico') return 'dep-est-fisico';
+  return 'dep-est-pendiente';
+}
+
 function cardPedido(p) {
+  const flujo = p.estado_flujo || '';
   return `
     <div class="dep-card">
       <div class="dep-card-hdr">
         <span class="dep-id">${esc(p.id)}</span>
-        <span class="dep-estado dep-est-pendiente">Pendiente</span>
+        <span class="dep-estado ${estadoClass(flujo)}">${estadoLabel(flujo)}</span>
         <span class="dep-fecha">${esc(p.fecha)}</span>
       </div>
       <div class="dep-grid">
-        <div class="dep-field"><div class="dep-label">RI completo</div><div class="dep-val" style="font-weight:800;color:#0b1b35">${esc(p.ri||'—')}</div></div>
-        <div class="dep-field"><div class="dep-label">N° Vale</div><div class="dep-val">${esc(p.num_vale||'—')}</div></div>
-        <div class="dep-field"><div class="dep-label">N° OT</div><div class="dep-val">${esc(p.num_ot||'—')}</div></div>
-        <div class="dep-field full"><div class="dep-label">Vale</div>${linkOTexto(p.vale, 'Vale')}</div>
+        <div class="dep-field"><div class="dep-label">RI</div><div class="dep-val" style="font-weight:800;color:#0b1b35">${esc(p.ri||'—')}</div></div>
+        <div class="dep-field"><div class="dep-label">Oficina / Sección</div><div class="dep-val">${esc(p.oficina||'—')}</div></div>
+        <div class="dep-field"><div class="dep-label">N° Suministro</div><div class="dep-val">${esc(p.num_suministro||'—')}</div></div>
+        <div class="dep-field"><div class="dep-label">Orden de Compra</div><div class="dep-val">${esc(p.oc||'—')}</div></div>
+        <div class="dep-field full"><div class="dep-label">Memo / Vale</div>${linkOTexto(p.memo_vale, 'Vale')}</div>
         <div class="dep-field full"><div class="dep-label">Presupuesto</div>${linkOTexto(p.presupuesto, 'Presupuesto')}</div>
         <div class="dep-field full"><div class="dep-label">Detalle del pedido</div><div class="dep-val">${esc(p.detalle||'—')}</div></div>
-        ${p.observaciones ? `<div class="dep-field full"><div class="dep-label">Observaciones</div>${linkOTexto(p.observaciones, 'Observaciones')}</div>` : ''}
+        ${p.observaciones ? `<div class="dep-field full"><div class="dep-label">Observaciones</div><div class="dep-val">${esc(p.observaciones)}</div></div>` : ''}
       </div>
     </div>`;
 }

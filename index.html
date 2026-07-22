@@ -11,7 +11,7 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Barlow', sans-serif; background: #f1f5f9; min-height: 100vh; }
+    body { font-family: 'Barlow', sans-serif; background: #f8fafd; min-height: 100vh; }
     #app { max-width: 100%; min-height: 100vh; display: flex; flex-direction: column; }
 
     /* ── PANTALLA INICIO ── */
@@ -108,36 +108,36 @@
 
     /* ── TARJETAS ── */
     .cards { display: flex; flex-direction: column; gap: 10px; }
-    .card { background: #fff; border-radius: 14px; padding: 14px 16px; border: 1.5px solid #e4eaf5; box-shadow: 0 1px 3px rgba(15,23,42,.04); cursor: pointer; transition: border-color .15s, box-shadow .15s; }
-    .card:hover { border-color: #93c5fd; box-shadow: 0 4px 12px rgba(15,23,42,.08); }
+    .card { background: #fff; border-radius: 14px; padding: 14px 16px; border: 1.5px solid #e2e8f4; box-shadow: 0 1px 2px rgba(11,27,53,.06), 0 0 0 1px rgba(11,27,53,.03); cursor: pointer; transition: transform .15s, box-shadow .15s, border-color .15s; }
+    .card:hover { border-color: #93c5fd; box-shadow: 0 4px 16px rgba(11,27,53,.12), 0 1px 3px rgba(11,27,53,.08); transform: translateY(-1px); }
+    .card:active { transform: translateY(0); }
     .card.rechazado { border-color: #fca5a5; background: #fff8f8; }
+    .card.rechazado:hover { border-color: #f87171; }
     .card.finalizado { border-color: #86efac; background: #f0fdf4; }
+    .card.finalizado:hover { border-color: #4ade80; }
     .card.en-proceso { border-color: #93c5fd; }
-    .card-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-    .card-id { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 800; }
-    .card-id.bhi { color: #1d4ed8; }
-    .card-id.pib { color: #15803d; }
-    .card-fecha { font-size: 11px; color: #94a3b8; }
-    .card-estado { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
-    .estado-pendiente   { background: #fef9c3; color: #a16207; }
-    .estado-pase-firma  { background: #dbeafe; color: #1d4ed8; }
+    .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .card-id { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; flex: 1; }
+    .card-id.bhi { color: #2563eb; }
+    .card-id.pib { color: #16a34a; }
+    .card-fecha { font-size: 10px; color: #94a8be; font-weight: 600; white-space: nowrap; }
+    .card-estado { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; white-space: nowrap; letter-spacing: .2px; }
+    .estado-pendiente   { background: #fef9c3; color: #92400e; }
+    .estado-pase-firma  { background: #eff6ff; color: #2563eb; }
     .estado-iniciado    { background: #dcfce7; color: #15803d; }
     .estado-aprobado    { background: #bbf7d0; color: #166534; }
-    .estado-fisico      { background: #fed7aa; color: #c2410c; }
+    .estado-fisico      { background: #ffedd5; color: #c2410c; }
     .estado-rechazado   { background: #fecaca; color: #dc2626; }
-    .card-oficina { font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
-    .card-detalle { font-size: 12px; color: #475569; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .card-footer { display: flex; gap: 8px; flex-wrap: wrap; }
-    .card-chip { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b; }
-    .card-ri-grande { font-family:'Barlow Condensed',sans-serif; font-size:18px; font-weight:800; color:#0b1b35; margin:4px 0 2px; }
-    .card-edit-row { display:flex; gap:8px; margin-top:10px; border-top:1px solid #f1f5f9; padding-top:8px; }
-    .card-edit-field { flex:1; display:flex; flex-direction:column; gap:3px; }
-    .card-edit-lbl { font-size:9px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; }
-    .card-edit-inp { border:1.5px solid #e4eaf5; border-radius:8px; padding:6px 8px; font-family:'Barlow',sans-serif; font-size:12px; font-weight:600; color:#0f172a; outline:none; background:#f8fafc; transition:border-color .15s; }
+    .card-oficina { font-size: 11px; font-weight: 700; color: #5a7194; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .3px; }
+    .card-ri-grande { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:800; color:#0f1f3d; margin: 2px 0 4px; }
+    .card-detalle { font-size: 12px; color: #5a7194; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.5; }
+    .card-footer { display: flex; gap: 6px; flex-wrap: wrap; }
+    .card-chip { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: #f1f5f9; color: #5a7194; }
+    .card-edit-inp { border:1.5px solid #e2e8f4; border-radius:8px; padding:7px 10px; font-family:'Barlow',sans-serif; font-size:12px; font-weight:600; color:#0f1f3d; outline:none; background:#f8fafd; transition:border-color .15s; }
     .card-edit-inp:focus { border-color:#3b82f6; background:#fff; }
     .card-edit-inp.guardado { border-color:#16a34a; background:#f0fdf4; }
     .card-chip.ok { background: #dcfce7; color: #15803d; }
-    .card-chip-link { text-decoration: none; cursor: pointer; }
+    .card-chip-link { text-decoration: none; cursor: pointer; transition: background .12s; }
     .card-chip-link:hover { background: #bbf7d0; }
     .card-chip.warn { background: #fef9c3; color: #92400e; }
     .card-chip.oc { background: #ede9fe; color: #7c3aed; }

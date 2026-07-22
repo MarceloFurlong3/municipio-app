@@ -123,7 +123,7 @@ function PasarDatos() {
 
   const checkboxValidation = SpreadsheetApp.newDataValidation().requireCheckbox().setAllowInvalid(false).build();
   const enviarMailsValidation = SpreadsheetApp.newDataValidation().requireValueInList(["solo al mail","mail y delegaciones"]).build();
-  const rechazarMailsValidation = SpreadsheetApp.newDataValidation().requireValueInList(["Falta Memo", "Falta Presupuesto", "Motivo Escrito"]).build();
+  const rechazarMailsValidation = SpreadsheetApp.newDataValidation().requireValueInList(["Falta Memo", "Falta Presupuesto", "Motivo Escrito", "Actualizar Presupuesto"]).build();
   
   const memoModificado = CortalinkSalto(memo);
   const presupuestoModificado = CortalinkSalto(presupuesto);
@@ -983,6 +983,27 @@ function obtenerFechaExacta() {
 
   }
 
+
+
+     if(sh.getName() == "Solicitudes Generales" && e.range.columnStart == 10 && e.range.rowStart > 1 && e.value == "Actualizar Presupuesto") {
+
+        let traerDatosPase = e.range.getSheet();
+        let filaSelec = e.range.rowStart;
+
+          recipient = email;
+         subject = `Registro Rechazado número ${id}`;
+         emailcomun = "asdasd"
+          body = `<p>Se ha rechazado el proceso de compra del Ri: ${ri} debido a que se debe actualizar el presupuesto.</p>
+                  <p>Por favor, realice una nueva solicitud incluyendo el presupuesto actualizado.</p>
+                  <p>Si necesita ayuda para completar la solicitud, no dude en contactarnos.</p>
+                  <p>Gracias por su comprensión.</p>`
+
+        let optsAvanzadas = {name: "Direccion de talleres BHI", htmlBody: body};
+        GmailApp.sendEmail(recipient, subject, emailcomun, optsAvanzadas);
+
+        let rangoFilaPase = traerDatosPase.getRange(filaSelec, 2, 1, traerDatosPase.getMaxColumns());
+        rangoFilaPase.setBackgroundRGB(255, 63, 63);
+  }
 
 
      if(sh.getName() == "Solicitudes Generales" && e.range.columnStart == 10 && e.range.rowStart > 1 && e.value == "Motivo Escrito") {
