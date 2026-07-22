@@ -19,4 +19,4 @@ Sin tareas activas — en modo mantenimiento.
 ## Tareas pendientes
 - Instalar git post-commit hook para DIARIO_RAW (cuando esté lista la Capa 2 de Zanta)
 ## Último commit (auto)
-`2026-07-22 12:48` — feat: pantalla de inicio con areas Solicitudes y Deposito
+`2026-07-22 13:16` — feat: rediseno completo + selector presupuestos + bug fix motivo + timeline + limpiar rechazo
