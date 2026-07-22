@@ -21,9 +21,16 @@ export default async function handler(req, res) {
       response = await fetch(`${GAS_URL}?${params}`, { redirect: 'follow' });
     }
 
-    const data = await response.json();
-    res.status(200).json(data);
+    const text = await response.text();
+    try {
+      const data = JSON.parse(text);
+      return res.status(200).json(data);
+    } catch {
+      // GAS devolvió HTML (requiere re-autorización o está caído)
+      console.error('GAS respuesta no-JSON:', text.substring(0, 200));
+      return res.status(502).json({ error: 'El servidor de datos no está disponible. Puede requerir re-autorización.' });
+    }
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 }
