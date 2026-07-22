@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0b1b35">
-  <title>Municipio App — Taller</title>
+  <title>Taller Municipal — Bahía Blanca</title>
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
@@ -14,17 +14,78 @@
     body { font-family: 'Barlow', sans-serif; background: #f1f5f9; min-height: 100vh; }
     #app { max-width: 100%; min-height: 100vh; display: flex; flex-direction: column; }
 
+    /* ── PANTALLA INICIO ── */
+    #pantalla-inicio {
+      min-height: 100vh;
+      background: #0b1b35;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      gap: 32px;
+    }
+    .inicio-header { text-align: center; }
+    .inicio-logo {
+      width: 72px; height: 72px;
+      background: #fff;
+      border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 28px; font-weight: 800; color: #0b1b35;
+      margin: 0 auto 16px;
+    }
+    .inicio-titulo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 28px; font-weight: 800; color: #fff;
+      letter-spacing: 1px;
+    }
+    .inicio-sub { font-size: 12px; color: rgba(255,255,255,.4); margin-top: 4px; letter-spacing: 2px; text-transform: uppercase; }
+    .inicio-areas { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 340px; }
+    .area-card {
+      background: rgba(255,255,255,.06);
+      border: 1.5px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      padding: 24px 20px;
+      cursor: pointer;
+      transition: all .2s;
+      display: flex; align-items: center; gap: 16px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .area-card:active { transform: scale(.97); }
+    .area-card:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.25); }
+    .area-card.sol { border-color: rgba(59,130,246,.4); }
+    .area-card.sol:hover { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.6); }
+    .area-card.dep { border-color: rgba(21,128,61,.4); }
+    .area-card.dep:hover { background: rgba(21,128,61,.1); border-color: rgba(21,128,61,.6); }
+    .area-ico {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; flex-shrink: 0;
+    }
+    .area-ico.sol { background: rgba(59,130,246,.2); }
+    .area-ico.dep { background: rgba(21,128,61,.2); }
+    .area-info { flex: 1; }
+    .area-nombre { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; color: #fff; }
+    .area-desc { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 2px; }
+    .area-arrow { color: rgba(255,255,255,.3); font-size: 20px; }
+
+    /* ── APP (cuando área seleccionada) ── */
+    #pantalla-app { display: none; flex-direction: column; min-height: 100vh; }
+    #pantalla-app.visible { display: flex; }
+
     /* ── NAVBAR ── */
     .nav { background: #0b1b35; padding: 14px 16px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
-    .nav-logo { width: 34px; height: 34px; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 800; color: #0b1b35; flex-shrink: 0; }
+    .nav-logo { width: 34px; height: 34px; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 800; color: #0b1b35; flex-shrink: 0; cursor: pointer; }
     .nav-title { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; color: #fff; flex: 1; }
     .nav-sub { font-size: 10px; color: rgba(255,255,255,.5); display: block; }
     .nav-refresh { background: none; border: none; color: rgba(255,255,255,.7); cursor: pointer; padding: 6px; border-radius: 8px; }
     .nav-refresh:hover { background: rgba(255,255,255,.1); }
     .nav-refresh svg { width: 18px; height: 18px; }
 
-    /* ── TABS ── */
+    /* ── TABS (solo en Solicitudes) ── */
     .tabs { display: flex; background: #fff; border-bottom: 2px solid #e4eaf5; padding: 0 12px; gap: 4px; position: sticky; top: 62px; z-index: 40; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .tabs.oculto { display: none; }
     .tab { flex: 1; padding: 12px 8px; border: none; background: none; font-family: 'Barlow', sans-serif; font-size: 13px; font-weight: 700; color: #64748b; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
     .tab:hover { color: #0b1b35; }
     .tab.activo { color: #0b1b35; border-bottom-color: #0b1b35; }
@@ -52,7 +113,6 @@
     .card.rechazado { border-color: #fca5a5; background: #fff8f8; }
     .card.finalizado { border-color: #86efac; background: #f0fdf4; }
     .card.en-proceso { border-color: #93c5fd; }
-
     .card-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
     .card-id { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 800; }
     .card-id.bhi { color: #1d4ed8; }
@@ -65,7 +125,6 @@
     .estado-aprobado    { background: #bbf7d0; color: #166534; }
     .estado-fisico      { background: #fed7aa; color: #c2410c; }
     .estado-rechazado   { background: #fecaca; color: #dc2626; }
-
     .card-oficina { font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
     .card-detalle { font-size: 12px; color: #475569; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .card-footer { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -108,11 +167,9 @@
     .btn-rechazar  { background: #fecaca; color: #dc2626; }
     .btn-accion:disabled { opacity: .4; cursor: not-allowed; }
 
-    /* ── EMPTY ── */
+    /* ── EMPTY / SPINNER ── */
     .empty { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 14px; }
     .empty svg { width: 48px; height: 48px; margin: 0 auto 12px; display: block; opacity: .3; }
-
-    /* ── SPINNER ── */
     .spinner { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 13px; }
 
     /* ── GRUPOS SOLICITUDES ── */
@@ -140,23 +197,57 @@
 
     @media (min-width: 600px) {
       .content { max-width: 700px; margin: 0 auto; }
+      .inicio-areas { max-width: 400px; }
     }
   </style>
 </head>
 <body>
-<div id="app">
+
+<!-- ══ PANTALLA DE INICIO ══ -->
+<div id="pantalla-inicio">
+  <div class="inicio-header">
+    <div class="inicio-logo">MU</div>
+    <div class="inicio-titulo">Taller Municipal</div>
+    <div class="inicio-sub">Bahía Blanca</div>
+  </div>
+
+  <div class="inicio-areas">
+    <div class="area-card sol" onclick="entrarArea('solicitudes')">
+      <div class="area-ico sol">📋</div>
+      <div class="area-info">
+        <div class="area-nombre">Solicitudes</div>
+        <div class="area-desc">BHI · PIB · Flota</div>
+      </div>
+      <span class="area-arrow">›</span>
+    </div>
+
+    <div class="area-card dep" onclick="entrarArea('deposito')">
+      <div class="area-ico dep">📦</div>
+      <div class="area-info">
+        <div class="area-nombre">Depósito</div>
+        <div class="area-desc">PIB · Flota</div>
+      </div>
+      <span class="area-arrow">›</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PANTALLA APP ══ -->
+<div id="pantalla-app">
+
   <nav class="nav">
-    <div class="nav-logo">MU</div>
+    <div class="nav-logo" onclick="volverInicio()" title="Volver al inicio">MU</div>
     <div style="flex:1">
-      <div class="nav-title">Taller Municipal</div>
-      <span class="nav-sub">Solicitudes Generales</span>
+      <div class="nav-title" id="nav-titulo">Taller Municipal</div>
+      <span class="nav-sub" id="nav-subtitulo"></span>
     </div>
     <button class="nav-refresh" id="btn-refresh" title="Actualizar">
       <i data-lucide="refresh-cw"></i>
     </button>
   </nav>
 
-  <div class="tabs">
+  <!-- Tabs BHI/PIB (solo en área Solicitudes) -->
+  <div class="tabs oculto" id="tabs-solicitudes">
     <button class="tab tab-bhi activo" id="tab-bhi">
       <i data-lucide="building-2" style="width:14px;height:14px"></i>
       BHI <span class="badge" id="badge-bhi">0</span>
@@ -197,7 +288,6 @@
       <select class="filtro-sel" id="filtro-estado-pib">
         <option value="">Todos los estados</option>
         <option value="Pendiente">Pendiente</option>
-        <option value="Pase a Firma">Pase a Firma</option>
         <option value="Iniciado">Iniciado</option>
         <option value="aprobado">Aprobado</option>
         <option value="pase a fisico">Pase a Físico</option>
@@ -222,24 +312,30 @@
 
   <div style="height:70px"></div>
 
-  <nav class="bottom-nav">
-    <button class="bottom-btn activo" id="nav-solicitudes">
+  <!-- Bottom nav área Solicitudes -->
+  <nav class="bottom-nav" id="nav-sol" style="display:none">
+    <button class="bottom-btn activo" id="nav-sol-solicitudes">
       <i data-lucide="clipboard-list"></i>
       Solicitudes
     </button>
-    <button class="bottom-btn" id="nav-buscar">
-      <i data-lucide="search"></i>
-      Buscar
-    </button>
-    <button class="bottom-btn" id="nav-deposito">
-      <i data-lucide="package"></i>
-      Depósito
-    </button>
-    <button class="bottom-btn" id="nav-flota">
+    <button class="bottom-btn" id="nav-sol-flota">
       <i data-lucide="car"></i>
       Flota
     </button>
   </nav>
+
+  <!-- Bottom nav área Depósito -->
+  <nav class="bottom-nav" id="nav-dep" style="display:none">
+    <button class="bottom-btn activo" id="nav-dep-deposito">
+      <i data-lucide="package"></i>
+      Depósito
+    </button>
+    <button class="bottom-btn" id="nav-dep-flota">
+      <i data-lucide="car"></i>
+      Flota
+    </button>
+  </nav>
+
 </div>
 
 <!-- Modal detalle -->
@@ -260,37 +356,102 @@
   import { montarDeposito } from './views/deposito.js';
 
   let depositoCargado = false;
-  let flotaCargada = false;
+  let flotaSolCargada = false;
+  let flotaDepCargada = false;
 
-  function activar(panelId, btnId) {
+  function activarPanel(panelId) {
     document.querySelectorAll('.content').forEach(p => p.classList.remove('activo'));
-    document.querySelectorAll('.bottom-btn').forEach(b => b.classList.remove('activo'));
     document.getElementById(panelId).classList.add('activo');
-    document.getElementById(btnId).classList.add('activo');
     if (window.lucide) lucide.createIcons();
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const btnDep   = document.getElementById('nav-deposito');
-    const panelDep = document.getElementById('panel-deposito');
-    const btnFlota  = document.getElementById('nav-flota');
-    const panelFlota = document.getElementById('panel-flota');
+  function activarBtnSol(btnId) {
+    document.querySelectorAll('#nav-sol .bottom-btn').forEach(b => b.classList.remove('activo'));
+    document.getElementById(btnId).classList.add('activo');
+  }
 
-    btnDep.addEventListener('click', () => {
-      activar('panel-deposito', 'nav-deposito');
+  function activarBtnDep(btnId) {
+    document.querySelectorAll('#nav-dep .bottom-btn').forEach(b => b.classList.remove('activo'));
+    document.getElementById(btnId).classList.add('activo');
+  }
+
+  window.entrarArea = function(area) {
+    sessionStorage.setItem('area', area);
+    document.getElementById('pantalla-inicio').style.display = 'none';
+    document.getElementById('pantalla-app').classList.add('visible');
+
+    if (area === 'solicitudes') {
+      document.getElementById('nav-titulo').textContent = 'Solicitudes';
+      document.getElementById('nav-subtitulo').textContent = 'BHI · PIB · Flota';
+      document.getElementById('tabs-solicitudes').classList.remove('oculto');
+      document.getElementById('nav-sol').style.display = 'flex';
+      document.getElementById('nav-dep').style.display = 'none';
+      activarPanel('panel-bhi');
+      activarBtnSol('nav-sol-solicitudes');
+    } else {
+      document.getElementById('nav-titulo').textContent = 'Depósito';
+      document.getElementById('nav-subtitulo').textContent = 'PIB · Flota';
+      document.getElementById('tabs-solicitudes').classList.add('oculto');
+      document.getElementById('nav-sol').style.display = 'none';
+      document.getElementById('nav-dep').style.display = 'flex';
+      activarPanel('panel-deposito');
+      activarBtnDep('nav-dep-deposito');
       if (!depositoCargado) {
         depositoCargado = true;
-        montarDeposito(panelDep);
+        montarDeposito(document.getElementById('panel-deposito'));
+      }
+    }
+    if (window.lucide) lucide.createIcons();
+  };
+
+  window.volverInicio = function() {
+    sessionStorage.removeItem('area');
+    document.getElementById('pantalla-inicio').style.display = 'flex';
+    document.getElementById('pantalla-app').classList.remove('visible');
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // ── Área Solicitudes: nav ──
+    document.getElementById('nav-sol-solicitudes').addEventListener('click', () => {
+      activarPanel('panel-bhi');
+      activarBtnSol('nav-sol-solicitudes');
+      document.getElementById('tabs-solicitudes').classList.remove('oculto');
+    });
+
+    document.getElementById('nav-sol-flota').addEventListener('click', () => {
+      activarPanel('panel-flota');
+      activarBtnSol('nav-sol-flota');
+      document.getElementById('tabs-solicitudes').classList.add('oculto');
+      if (!flotaSolCargada) {
+        flotaSolCargada = true;
+        document.getElementById('panel-flota').innerHTML =
+          '<iframe src="https://marcelofurlong3.github.io/flota-municipal/" allowfullscreen></iframe>';
       }
     });
 
-    btnFlota.addEventListener('click', () => {
-      activar('panel-flota', 'nav-flota');
-      if (!flotaCargada) {
-        flotaCargada = true;
-        panelFlota.innerHTML = '<iframe src="https://marcelofurlong3.github.io/flota-municipal/" allowfullscreen></iframe>';
+    // ── Área Depósito: nav ──
+    document.getElementById('nav-dep-deposito').addEventListener('click', () => {
+      activarPanel('panel-deposito');
+      activarBtnDep('nav-dep-deposito');
+      if (!depositoCargado) {
+        depositoCargado = true;
+        montarDeposito(document.getElementById('panel-deposito'));
       }
     });
+
+    document.getElementById('nav-dep-flota').addEventListener('click', () => {
+      activarPanel('panel-flota');
+      activarBtnDep('nav-dep-flota');
+      if (!flotaDepCargada) {
+        flotaDepCargada = true;
+        document.getElementById('panel-flota').innerHTML =
+          '<iframe src="https://marcelofurlong3.github.io/flota-municipal/" allowfullscreen></iframe>';
+      }
+    });
+
+    // Restaurar área si ya eligió antes
+    const area = sessionStorage.getItem('area');
+    if (area) entrarArea(area);
   });
 </script>
 <script>
