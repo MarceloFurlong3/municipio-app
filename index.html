@@ -310,6 +310,9 @@
   <!-- FLOTA -->
   <div class="content" id="panel-flota"></div>
 
+  <!-- TALLERES (OT + Vales) -->
+  <div class="content" id="panel-talleres"></div>
+
   <div style="height:70px"></div>
 
   <!-- Bottom nav área Solicitudes -->
@@ -322,6 +325,10 @@
       <i data-lucide="car"></i>
       Flota
     </button>
+    <button class="bottom-btn" id="nav-sol-talleres">
+      <i data-lucide="wrench"></i>
+      Talleres
+    </button>
   </nav>
 
   <!-- Bottom nav área Depósito -->
@@ -333,6 +340,10 @@
     <button class="bottom-btn" id="nav-dep-flota">
       <i data-lucide="car"></i>
       Flota
+    </button>
+    <button class="bottom-btn" id="nav-dep-talleres">
+      <i data-lucide="wrench"></i>
+      Talleres
     </button>
   </nav>
 
@@ -353,10 +364,12 @@
 
 <script type="module" src="views/solicitudes.js"></script>
 <script type="module">
-  import { montarDeposito } from './views/deposito.js';
+  import { montarDeposito }  from './views/deposito.js';
+  import { montarTalleres }  from './views/talleres.js';
 
-  let depositoCargado = false;
-  let flotaSolCargada = false;
+  let depositoCargado   = false;
+  let flotaSolCargada   = false;
+  let talleresCargado   = false;
   let flotaDepCargada = false;
 
   function activarPanel(panelId) {
@@ -429,7 +442,26 @@
       }
     });
 
+    document.getElementById('nav-sol-talleres').addEventListener('click', () => {
+      activarPanel('panel-talleres');
+      activarBtnSol('nav-sol-talleres');
+      document.getElementById('tabs-solicitudes').classList.add('oculto');
+      if (!talleresCargado) {
+        talleresCargado = true;
+        montarTalleres(document.getElementById('panel-talleres'));
+      }
+    });
+
     // ── Área Depósito: nav ──
+    document.getElementById('nav-dep-talleres')?.addEventListener('click', () => {
+      activarPanel('panel-talleres');
+      activarBtnDep('nav-dep-talleres');
+      if (!talleresCargado) {
+        talleresCargado = true;
+        montarTalleres(document.getElementById('panel-talleres'));
+      }
+    });
+
     document.getElementById('nav-dep-deposito').addEventListener('click', () => {
       activarPanel('panel-deposito');
       activarBtnDep('nav-dep-deposito');

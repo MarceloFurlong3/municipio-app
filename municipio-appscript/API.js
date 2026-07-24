@@ -39,7 +39,206 @@ function doPostAPI(e) {
   if (data.action === 'setObservaciones') return respJSON(setCeldaSolicitud(data.fila, 14, data.valor));
   if (data.action === 'limpiarRechazo')   return respJSON(limpiarRechazo(data.fila));
 
+  // ── ÓRDENES DE TRABAJO ──
+  if (data.action === 'crearOT')    return respJSON(crearOT(data));
+  if (data.action === 'getOTs')     return respJSON(getOTs());
+  if (data.action === 'actualizarOT') return respJSON(actualizarOT(data));
+
+  // ── VALES DE MATERIALES ──
+  if (data.action === 'crearVale')  return respJSON(crearVale(data));
+  if (data.action === 'getVales')   return respJSON(getVales());
+  if (data.action === 'marcarValeRetirado') return respJSON(marcarValeRetirado(data.fila));
+
   return respJSON({ error: 'accion invalida' });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ÓRDENES DE TRABAJO
+// Hoja: ORDENES_TRABAJO
+// Cols: A=numero_ot | B=fecha | C=seccion | D=ri | E=dependencia |
+//       F=memo | G=odometro | H=legajo_solicita | I=nombre_solicita |
+//       J=descripcion | K=tareas | L=repuestos | M=agente | N=horas |
+//       O=fecha_entrada | P=hora_entrada | Q=fecha_salida | R=hora_salida |
+//       S=firma_aclaracion | T=legajo_firma | U=estado
+// ══════════════════════════════════════════════════════════════════════════════
+function _getSheetOT() {
+  const ss = getSpreadsheet();
+  let sh = ss.getSheetByName('ORDENES_TRABAJO');
+  if (!sh) {
+    sh = ss.insertSheet('ORDENES_TRABAJO');
+    sh.getRange(1, 1, 1, 21).setValues([[
+      'numero_ot','fecha','seccion','ri','dependencia','memo','odometro',
+      'legajo_solicita','nombre_solicita','descripcion',
+      'tareas','repuestos','agente','horas',
+      'fecha_entrada','hora_entrada','fecha_salida','hora_salida',
+      'firma_aclaracion','legajo_firma','estado'
+    ]]);
+    sh.getRange(1,1,1,21).setFontWeight('bold');
+  }
+  return sh;
+}
+
+function _proximoNumeroOT() {
+  const sh = _getSheetOT();
+  const last = sh.getLastRow();
+  if (last < 2) return 130001;
+  const nums = sh.getRange(2, 1, last - 1, 1).getValues()
+    .map(r => parseInt(r[0]) || 0).filter(n => n > 0);
+  return nums.length ? Math.max(...nums) + 1 : 130001;
+}
+
+function crearOT(d) {
+  try {
+    const sh = _getSheetOT();
+    const num = _proximoNumeroOT();
+    const fecha = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+    sh.appendRow([
+      num, fecha,
+      d.seccion || '',
+      d.ri || '',
+      d.dependencia || '',
+      d.memo || '',
+      d.odometro || 0,
+      d.legajo_solicita || '',
+      d.nombre_solicita || '',
+      d.descripcion || '',
+      '', '', '', '',  // tareas, repuestos, agente, horas (se completan después)
+      '', '', '', '',  // fechas/horas entrada y salida
+      '', '',          // firma, legajo
+      'Abierta'        // estado
+    ]);
+    SpreadsheetApp.flush();
+    return { ok: true, numero_ot: num };
+  } catch(e) {
+    return { error: e.message };
+  }
+}
+
+function getOTs() {
+  try {
+    const sh = _getSheetOT();
+    const last = sh.getLastRow();
+    if (last < 2) return { ots: [] };
+    const rows = sh.getRange(2, 1, last - 1, 21).getDisplayValues();
+    const ots = rows.filter(r => r[0]).map((r, i) => ({
+      fila: i + 2,
+      numero_ot: r[0], fecha: r[1], seccion: r[2], ri: r[3],
+      dependencia: r[4], memo: r[5], odometro: r[6],
+      legajo_solicita: r[7], nombre_solicita: r[8], descripcion: r[9],
+      tareas: r[10], repuestos: r[11], agente: r[12], horas: r[13],
+      fecha_entrada: r[14], hora_entrada: r[15], fecha_salida: r[16], hora_salida: r[17],
+      firma_aclaracion: r[18], legajo_firma: r[19], estado: r[20]
+    }));
+    return { ots };
+  } catch(e) {
+    return { error: e.message };
+  }
+}
+
+function actualizarOT(d) {
+  try {
+    const sh = _getSheetOT();
+    const f = parseInt(d.fila);
+    if (!f) return { error: 'Fila inválida' };
+    if (d.tareas !== undefined) sh.getRange(f, 11).setValue(d.tareas);
+    if (d.repuestos !== undefined) sh.getRange(f, 12).setValue(d.repuestos);
+    if (d.agente !== undefined) sh.getRange(f, 13).setValue(d.agente);
+    if (d.horas !== undefined) sh.getRange(f, 14).setValue(d.horas);
+    if (d.estado !== undefined) sh.getRange(f, 21).setValue(d.estado);
+    SpreadsheetApp.flush();
+    return { ok: true };
+  } catch(e) {
+    return { error: e.message };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// VALES DE MATERIALES
+// Hoja: VALES_MATERIALES
+// Cols: A=numero_vale | B=fecha | C=dependencia | D=codigo_ud |
+//       E=numero_ot | F=ri | G=items_json | H=legajo_solicita |
+//       I=nombre_solicita | J=estado | K=fecha_retiro
+// ══════════════════════════════════════════════════════════════════════════════
+function _getSheetVales() {
+  const ss = getSpreadsheet();
+  let sh = ss.getSheetByName('VALES_MATERIALES');
+  if (!sh) {
+    sh = ss.insertSheet('VALES_MATERIALES');
+    sh.getRange(1, 1, 1, 11).setValues([[
+      'numero_vale','fecha','dependencia','codigo_ud','numero_ot','ri',
+      'items_json','legajo_solicita','nombre_solicita','estado','fecha_retiro'
+    ]]);
+    sh.getRange(1,1,1,11).setFontWeight('bold');
+  }
+  return sh;
+}
+
+function _proximoNumeroVale() {
+  const sh = _getSheetVales();
+  const last = sh.getLastRow();
+  if (last < 2) return 535;
+  const nums = sh.getRange(2, 1, last - 1, 1).getValues()
+    .map(r => parseInt(r[0]) || 0).filter(n => n > 0);
+  return nums.length ? Math.max(...nums) + 1 : 535;
+}
+
+function crearVale(d) {
+  try {
+    const sh = _getSheetVales();
+    const num = _proximoNumeroVale();
+    const fecha = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+    sh.appendRow([
+      num, fecha,
+      d.dependencia || '',
+      d.codigo_ud || '',
+      d.numero_ot || '',
+      d.ri || '',
+      JSON.stringify(d.items || []),
+      d.legajo_solicita || '',
+      d.nombre_solicita || '',
+      'Pendiente',
+      ''
+    ]);
+    SpreadsheetApp.flush();
+    return { ok: true, numero_vale: num };
+  } catch(e) {
+    return { error: e.message };
+  }
+}
+
+function getVales() {
+  try {
+    const sh = _getSheetVales();
+    const last = sh.getLastRow();
+    if (last < 2) return { vales: [] };
+    const rows = sh.getRange(2, 1, last - 1, 11).getDisplayValues();
+    const vales = rows.filter(r => r[0]).map((r, i) => ({
+      fila: i + 2,
+      numero_vale: r[0], fecha: r[1], dependencia: r[2], codigo_ud: r[3],
+      numero_ot: r[4], ri: r[5],
+      items: (() => { try { return JSON.parse(r[6]); } catch(e) { return []; } })(),
+      legajo_solicita: r[7], nombre_solicita: r[8],
+      estado: r[9], fecha_retiro: r[10]
+    }));
+    return { vales };
+  } catch(e) {
+    return { error: e.message };
+  }
+}
+
+function marcarValeRetirado(fila) {
+  try {
+    const sh = _getSheetVales();
+    const f = parseInt(fila);
+    if (!f) return { error: 'Fila inválida' };
+    const fecha = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+    sh.getRange(f, 10).setValue('Retirado');
+    sh.getRange(f, 11).setValue(fecha);
+    SpreadsheetApp.flush();
+    return { ok: true };
+  } catch(e) {
+    return { error: e.message };
+  }
 }
 
 // ── LEER SOLICITUDES (Cols A-N = 1-14) ───────────────────────────────────────

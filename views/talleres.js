@@ -1,0 +1,603 @@
+// ══════════════════════════════════════════════════════════════════════════════
+// talleres.js — Órdenes de Trabajo y Vales de Materiales
+// Departamento de Talleres — Municipalidad de Bahía Blanca
+// ══════════════════════════════════════════════════════════════════════════════
+import { apiPost, apiFetch, toast } from '../shared.js';
+
+// ── Cache ─────────────────────────────────────────────────────────────────────
+let otsCache   = [];
+let valesCache = [];
+let tabActiva  = 'ot'; // 'ot' | 'vale'
+
+// ── Montar ────────────────────────────────────────────────────────────────────
+export function montarTalleres(c) {
+  c.innerHTML = `
+<style>
+/* PRINT — oculta todo excepto el documento a imprimir */
+@media print {
+  body > *:not(#print-area) { display: none !important; }
+  #print-area { display: block !important; }
+  .no-print { display: none !important; }
+}
+#print-area { display: none; }
+
+/* TABS */
+.tall-tabs { display:flex; gap:0; border-bottom:2px solid #e2e8f0; margin-bottom:14px; }
+.tall-tab { flex:1; padding:10px; text-align:center; font-size:13px; font-weight:700;
+  color:#64748b; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px;
+  background:none; border-top:none; border-left:none; border-right:none; transition:all .15s; }
+.tall-tab.on { color:#0b1b35; border-bottom-color:#0b1b35; }
+
+/* BOTÓN NUEVO */
+.tall-nuevo { width:100%; padding:11px; background:#0b1b35; color:#fff; border:none;
+  border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; margin-bottom:14px; }
+.tall-nuevo:hover { opacity:.9; }
+
+/* CARDS DE LISTA */
+.tall-card { background:#fff; border-radius:10px; border:1px solid #e2e8f0;
+  padding:13px; margin-bottom:8px; cursor:pointer; transition:box-shadow .12s; }
+.tall-card:hover { box-shadow:0 2px 8px rgba(0,0,0,.08); }
+.tall-card-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
+.tall-num { font-size:16px; font-weight:800; color:#0b1b35; }
+.tall-badge { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; }
+.tall-badge.pendiente { background:#fef9c3; color:#92400e; }
+.tall-badge.retirado  { background:#dcfce7; color:#166534; }
+.tall-badge.abierta   { background:#dbeafe; color:#1e40af; }
+.tall-badge.cerrada   { background:#f1f5f9; color:#64748b; }
+.tall-ri { font-size:13px; font-weight:700; color:#334155; }
+.tall-dep { font-size:11px; color:#94a3b8; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tall-items { font-size:11px; color:#64748b; margin-top:5px; }
+
+/* MODAL FORM */
+.tall-modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:500;
+  align-items:flex-end; justify-content:center; }
+.tall-modal-bg.vis { display:flex; }
+.tall-modal { background:#fff; border-radius:18px 18px 0 0; width:100%; max-width:600px;
+  padding:20px; max-height:92vh; overflow-y:auto; }
+.tall-modal h3 { font-size:16px; font-weight:800; margin-bottom:16px; color:#0b1b35; }
+.tall-field { margin-bottom:12px; }
+.tall-field label { display:block; font-size:11px; font-weight:700; color:#64748b;
+  text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+.tall-field input, .tall-field select, .tall-field textarea {
+  width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px;
+  font-size:14px; outline:none; font-family:inherit; transition:border-color .15s; }
+.tall-field input:focus, .tall-field select:focus, .tall-field textarea:focus { border-color:#0b1b35; }
+.tall-field textarea { resize:vertical; min-height:70px; }
+.tall-row { display:flex; gap:10px; }
+.tall-row .tall-field { flex:1; }
+
+/* Items del vale */
+.items-lista { border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:8px; }
+.item-row { display:flex; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid #f1f5f9; }
+.item-row:last-child { border-bottom:none; }
+.item-cant { width:60px; flex-shrink:0; }
+.item-desc { flex:1; }
+.item-del { background:none; border:none; color:#ef4444; cursor:pointer; font-size:16px; padding:0 4px; }
+.btn-add-item { width:100%; padding:8px; background:#f8fafc; border:1.5px dashed #cbd5e1;
+  border-radius:8px; color:#64748b; font-size:13px; font-weight:600; cursor:pointer; }
+.btn-add-item:hover { background:#f1f5f9; }
+
+/* Botones del modal */
+.tall-btns { display:flex; gap:8px; margin-top:16px; }
+.tall-btn-ok { flex:1; padding:12px; background:#0b1b35; color:#fff; border:none;
+  border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; }
+.tall-btn-cancel { padding:12px 18px; background:none; border:1.5px solid #e2e8f0;
+  color:#64748b; border-radius:10px; font-size:14px; cursor:pointer; }
+.tall-btn-print { flex:1; padding:12px; background:#16a34a; color:#fff; border:none;
+  border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; }
+.tall-btn-retiro { flex:1; padding:10px; background:#f59e0b; color:#fff; border:none;
+  border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; }
+</style>
+
+<div class="tall-tabs">
+  <button class="tall-tab on" id="tab-ot" onclick="switchTallTab('ot')">📋 Órdenes de Trabajo</button>
+  <button class="tall-tab" id="tab-vale" onclick="switchTallTab('vale')">📄 Vales de Materiales</button>
+</div>
+
+<!-- PANEL OT -->
+<div id="panel-ot">
+  <button class="tall-nuevo" onclick="abrirNuevaOT()">+ Nueva Orden de Trabajo</button>
+  <div id="lista-ot"><div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">Cargando...</div></div>
+</div>
+
+<!-- PANEL VALE -->
+<div id="panel-vale" style="display:none">
+  <button class="tall-nuevo" onclick="abrirNuevoVale()">+ Nuevo Vale de Materiales</button>
+  <div id="lista-vale"><div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">Cargando...</div></div>
+</div>
+
+<!-- MODAL OT -->
+<div class="tall-modal-bg" id="modal-ot">
+  <div class="tall-modal">
+    <h3>📋 Nueva Orden de Trabajo</h3>
+    <div class="tall-row">
+      <div class="tall-field">
+        <label>R.I. del Vehículo</label>
+        <input id="ot-ri" placeholder="Ej: A779" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div class="tall-field">
+        <label>Sección</label>
+        <input id="ot-seccion" placeholder="Ej: ALMACEN" oninput="this.value=this.value.toUpperCase()">
+      </div>
+    </div>
+    <div class="tall-field">
+      <label>Dependencia</label>
+      <input id="ot-dependencia" placeholder="Ej: 210 - SEC. ECONOMIA Y ACIENDA" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="tall-row">
+      <div class="tall-field">
+        <label>Legajo quien solicita</label>
+        <input id="ot-legajo" type="number" placeholder="Ej: 12640">
+      </div>
+      <div class="tall-field">
+        <label>Nombre quien solicita</label>
+        <input id="ot-nombre" placeholder="Apellido Nombre" oninput="this.value=this.value.toUpperCase()">
+      </div>
+    </div>
+    <div class="tall-row">
+      <div class="tall-field">
+        <label>Memo N°</label>
+        <input id="ot-memo" placeholder="Opcional">
+      </div>
+      <div class="tall-field">
+        <label>Odómetro</label>
+        <input id="ot-odometro" type="number" placeholder="0" value="0">
+      </div>
+    </div>
+    <div class="tall-field">
+      <label>Descripción del trabajo a realizar</label>
+      <textarea id="ot-descripcion" placeholder="Ej: KIT DE FILTROS - KIT DE DISTRIBUCIÓN"></textarea>
+    </div>
+    <div class="tall-btns">
+      <button class="tall-btn-cancel" onclick="cerrarModales()">Cancelar</button>
+      <button class="tall-btn-ok" onclick="guardarOT()">Crear OT</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VALE -->
+<div class="tall-modal-bg" id="modal-vale">
+  <div class="tall-modal">
+    <h3>📄 Nuevo Vale de Materiales</h3>
+    <div class="tall-row">
+      <div class="tall-field">
+        <label>R.I. del Vehículo</label>
+        <input id="v-ri" placeholder="Ej: A779" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div class="tall-field">
+        <label>O/T N°</label>
+        <input id="v-ot" type="number" placeholder="Ej: 135869">
+      </div>
+    </div>
+    <div class="tall-field">
+      <label>Dependencia</label>
+      <input id="v-dependencia" placeholder="Ej: CONSERVACIÓN VIAL" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="tall-row">
+      <div class="tall-field">
+        <label>Código U.D. N°</label>
+        <input id="v-codud" placeholder="Ej: 2201">
+      </div>
+      <div class="tall-field">
+        <label>Legajo quien solicita</label>
+        <input id="v-legajo" type="number" placeholder="Ej: 12640">
+      </div>
+    </div>
+    <div class="tall-field">
+      <label>Nombre quien solicita</label>
+      <input id="v-nombre" placeholder="Apellido Nombre" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="tall-field">
+      <label>Materiales / Repuestos solicitados</label>
+      <div class="items-lista" id="items-lista">
+        <div class="item-row" id="item-0">
+          <input class="item-cant" type="number" placeholder="1" min="1" value="1">
+          <input class="item-desc" placeholder="Descripción del material" oninput="this.value=this.value.toUpperCase()">
+          <button class="item-del" onclick="eliminarItem(0)">✕</button>
+        </div>
+      </div>
+      <button class="btn-add-item" onclick="agregarItem()">+ Agregar item</button>
+    </div>
+    <div class="tall-btns">
+      <button class="tall-btn-cancel" onclick="cerrarModales()">Cancelar</button>
+      <button class="tall-btn-ok" onclick="guardarVale()">Crear Vale</button>
+    </div>
+  </div>
+</div>
+
+<!-- ÁREA DE IMPRESIÓN (oculta, solo se ve al imprimir) -->
+<div id="print-area"></div>
+`;
+
+  // Exponer funciones globalmente
+  window.switchTallTab = switchTallTab;
+  window.abrirNuevaOT  = abrirNuevaOT;
+  window.abrirNuevoVale = abrirNuevoVale;
+  window.cerrarModales = cerrarModales;
+  window.guardarOT     = guardarOT;
+  window.guardarVale   = guardarVale;
+  window.agregarItem   = agregarItem;
+  window.eliminarItem  = eliminarItem;
+  window.imprimirOT    = imprimirOT;
+  window.imprimirVale  = imprimirVale;
+  window.marcarRetirado = marcarRetirado;
+
+  cargarOTs();
+  cargarVales();
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTallTab(tab) {
+  tabActiva = tab;
+  document.getElementById('tab-ot').classList.toggle('on', tab === 'ot');
+  document.getElementById('tab-vale').classList.toggle('on', tab === 'vale');
+  document.getElementById('panel-ot').style.display   = tab === 'ot'   ? '' : 'none';
+  document.getElementById('panel-vale').style.display = tab === 'vale' ? '' : 'none';
+}
+
+// ── Cargar listas ─────────────────────────────────────────────────────────────
+async function cargarOTs() {
+  try {
+    const res = await apiPost({ action: 'getOTs' });
+    otsCache = (res.ots || []).reverse();
+    renderOTs();
+  } catch(e) { console.error(e); }
+}
+
+async function cargarVales() {
+  try {
+    const res = await apiPost({ action: 'getVales' });
+    valesCache = (res.vales || []).reverse();
+    renderVales();
+  } catch(e) { console.error(e); }
+}
+
+// ── Render listas ─────────────────────────────────────────────────────────────
+function renderOTs() {
+  const el = document.getElementById('lista-ot');
+  if (!otsCache.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">Sin órdenes de trabajo</div>';
+    return;
+  }
+  el.innerHTML = otsCache.map(ot => `
+    <div class="tall-card" onclick="abrirDetalleOT(${ot.fila})">
+      <div class="tall-card-hdr">
+        <span class="tall-num">OT ${ot.numero_ot}</span>
+        <span class="tall-badge ${ot.estado?.toLowerCase() || 'abierta'}">${ot.estado || 'Abierta'}</span>
+      </div>
+      <div class="tall-ri">${ot.ri || '—'} · ${ot.seccion || '—'}</div>
+      <div class="tall-dep">${ot.dependencia || '—'}</div>
+      <div class="tall-items">${ot.descripcion || ''}</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:5px">${ot.fecha} · Solicita: ${ot.nombre_solicita || '—'}</div>
+    </div>`).join('');
+}
+
+function renderVales() {
+  const el = document.getElementById('lista-vale');
+  if (!valesCache.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">Sin vales de materiales</div>';
+    return;
+  }
+  el.innerHTML = valesCache.map(v => {
+    const itemsTxt = (v.items || []).map(i => `${i.cant} × ${i.desc}`).join(', ');
+    return `
+    <div class="tall-card" onclick="abrirDetalleVale(${v.fila})">
+      <div class="tall-card-hdr">
+        <span class="tall-num">Vale ${String(v.numero_vale).padStart(7,'0')}</span>
+        <span class="tall-badge ${v.estado?.toLowerCase() || 'pendiente'}">${v.estado || 'Pendiente'}</span>
+      </div>
+      <div class="tall-ri">${v.ri || '—'} ${v.numero_ot ? '· OT ' + v.numero_ot : ''}</div>
+      <div class="tall-dep">${v.dependencia || '—'}</div>
+      <div class="tall-items">${itemsTxt}</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:5px">${v.fecha} · Solicita: ${v.nombre_solicita || '—'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Modales ───────────────────────────────────────────────────────────────────
+function abrirNuevaOT()    { document.getElementById('modal-ot').classList.add('vis'); }
+function abrirNuevoVale()  { document.getElementById('modal-vale').classList.add('vis'); }
+function cerrarModales()   {
+  document.getElementById('modal-ot').classList.remove('vis');
+  document.getElementById('modal-vale').classList.remove('vis');
+}
+
+// ── Items del vale ────────────────────────────────────────────────────────────
+let itemCount = 1;
+function agregarItem() {
+  const lista = document.getElementById('items-lista');
+  const div = document.createElement('div');
+  div.className = 'item-row';
+  div.id = 'item-' + itemCount;
+  div.innerHTML = `
+    <input class="item-cant" type="number" placeholder="1" min="1" value="1">
+    <input class="item-desc" placeholder="Descripción del material" oninput="this.value=this.value.toUpperCase()">
+    <button class="item-del" onclick="eliminarItem(${itemCount})">✕</button>`;
+  lista.appendChild(div);
+  div.querySelector('.item-desc').focus();
+  itemCount++;
+}
+function eliminarItem(id) {
+  const el = document.getElementById('item-' + id);
+  if (el && document.querySelectorAll('.item-row').length > 1) el.remove();
+}
+function getItems() {
+  return [...document.querySelectorAll('.item-row')].map(row => ({
+    cant: row.querySelector('.item-cant').value || '1',
+    desc: row.querySelector('.item-desc').value.trim()
+  })).filter(i => i.desc);
+}
+
+// ── Guardar OT ────────────────────────────────────────────────────────────────
+async function guardarOT() {
+  const ri  = document.getElementById('ot-ri').value.trim();
+  const desc = document.getElementById('ot-descripcion').value.trim();
+  if (!ri || !desc) { toast('Completá el RI y la descripción', 'err'); return; }
+  try {
+    const res = await apiPost({
+      action: 'crearOT',
+      ri, seccion: document.getElementById('ot-seccion').value.trim(),
+      dependencia: document.getElementById('ot-dependencia').value.trim(),
+      legajo_solicita: document.getElementById('ot-legajo').value,
+      nombre_solicita: document.getElementById('ot-nombre').value.trim(),
+      memo: document.getElementById('ot-memo').value.trim(),
+      odometro: document.getElementById('ot-odometro').value || 0,
+      descripcion: desc
+    });
+    if (res.error) { toast('Error: ' + res.error, 'err'); return; }
+    toast('OT ' + res.numero_ot + ' creada', 'ok');
+    cerrarModales();
+    await cargarOTs();
+    // Imprimir automáticamente
+    const ot = otsCache.find(o => String(o.numero_ot) === String(res.numero_ot));
+    if (ot) setTimeout(() => imprimirOT(ot), 300);
+  } catch(e) { toast('Error al crear OT', 'err'); }
+}
+
+// ── Guardar Vale ──────────────────────────────────────────────────────────────
+async function guardarVale() {
+  const ri    = document.getElementById('v-ri').value.trim();
+  const items = getItems();
+  if (!ri || !items.length) { toast('Completá el RI y al menos un material', 'err'); return; }
+  try {
+    const res = await apiPost({
+      action: 'crearVale',
+      ri, numero_ot: document.getElementById('v-ot').value,
+      dependencia: document.getElementById('v-dependencia').value.trim(),
+      codigo_ud: document.getElementById('v-codud').value.trim(),
+      legajo_solicita: document.getElementById('v-legajo').value,
+      nombre_solicita: document.getElementById('v-nombre').value.trim(),
+      items
+    });
+    if (res.error) { toast('Error: ' + res.error, 'err'); return; }
+    toast('Vale ' + res.numero_vale + ' creado', 'ok');
+    cerrarModales();
+    await cargarVales();
+    const vale = valesCache.find(v => String(v.numero_vale) === String(res.numero_vale));
+    if (vale) setTimeout(() => imprimirVale(vale), 300);
+  } catch(e) { toast('Error al crear vale', 'err'); }
+}
+
+// ── Detalle OT ────────────────────────────────────────────────────────────────
+window.abrirDetalleOT = function(fila) {
+  const ot = otsCache.find(o => o.fila === fila);
+  if (!ot) return;
+  // Simple: mostrar botón imprimir + datos
+  const html = `
+    <div style="padding:16px;background:#fff;border-radius:14px;border:1px solid #e2e8f0">
+      <div style="font-size:18px;font-weight:800;color:#0b1b35;margin-bottom:12px">OT ${ot.numero_ot}</div>
+      <div style="font-size:13px;color:#334155;line-height:2">
+        <b>Fecha:</b> ${ot.fecha}<br>
+        <b>RI:</b> ${ot.ri}<br>
+        <b>Sección:</b> ${ot.seccion}<br>
+        <b>Dependencia:</b> ${ot.dependencia}<br>
+        <b>Solicita:</b> ${ot.nombre_solicita} (Leg. ${ot.legajo_solicita})<br>
+        <b>Descripción:</b> ${ot.descripcion}<br>
+        <b>Estado:</b> ${ot.estado}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="tall-btn-print no-print" onclick="imprimirOT(otsCache.find(o=>o.fila===${fila}))">🖨 Imprimir OT</button>
+      </div>
+    </div>`;
+  const area = document.createElement('div');
+  area.style = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;padding:20px;display:flex;align-items:center;justify-content:center';
+  area.innerHTML = html + '<button onclick="this.parentElement.remove()" style="position:absolute;top:16px;right:16px;background:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">×</button>';
+  document.body.appendChild(area);
+};
+
+// ── Detalle Vale ──────────────────────────────────────────────────────────────
+window.abrirDetalleVale = function(fila) {
+  const v = valesCache.find(x => x.fila === fila);
+  if (!v) return;
+  const itemsHtml = (v.items || []).map(i => `<li>${i.cant} — ${i.desc}</li>`).join('');
+  const area = document.createElement('div');
+  area.style = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;padding:20px;display:flex;align-items:center;justify-content:center';
+  area.innerHTML = `
+    <div style="padding:16px;background:#fff;border-radius:14px;border:1px solid #e2e8f0;max-width:500px;width:100%">
+      <div style="font-size:18px;font-weight:800;color:#0b1b35;margin-bottom:12px">Vale ${String(v.numero_vale).padStart(7,'0')}</div>
+      <div style="font-size:13px;color:#334155;line-height:2">
+        <b>Fecha:</b> ${v.fecha}<br>
+        <b>RI:</b> ${v.ri}<br>
+        <b>O/T:</b> ${v.numero_ot || '—'}<br>
+        <b>Dependencia:</b> ${v.dependencia}<br>
+        <b>Solicita:</b> ${v.nombre_solicita}<br>
+        <b>Estado:</b> <span class="tall-badge ${v.estado?.toLowerCase()}">${v.estado}</span>
+      </div>
+      <ul style="margin:10px 0 10px 18px;font-size:13px">${itemsHtml}</ul>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="tall-btn-print no-print" onclick="imprimirVale(valesCache.find(x=>x.fila===${fila}))">🖨 Imprimir</button>
+        ${v.estado !== 'Retirado' ? `<button class="tall-btn-retiro no-print" onclick="marcarRetirado(${fila},this)">✅ Marcar retirado</button>` : ''}
+      </div>
+    </div>
+    <button onclick="this.parentElement.remove()" style="position:absolute;top:16px;right:16px;background:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">×</button>`;
+  document.body.appendChild(area);
+};
+
+// ── Marcar retirado ───────────────────────────────────────────────────────────
+async function marcarRetirado(fila, btn) {
+  try {
+    await apiPost({ action: 'marcarValeRetirado', fila });
+    toast('Marcado como retirado', 'ok');
+    btn?.closest('[style*="fixed"]')?.remove();
+    await cargarVales();
+  } catch(e) { toast('Error', 'err'); }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// IMPRESIÓN — réplica exacta de los documentos oficiales
+// ══════════════════════════════════════════════════════════════════════════════
+
+function imprimirOT(ot) {
+  if (!ot) return;
+  const pa = document.getElementById('print-area');
+  pa.innerHTML = `
+<style>
+  @media print {
+    @page { size: A4; margin: 15mm; }
+    body { font-family: Arial, sans-serif; font-size: 11px; }
+  }
+  .ot-doc { font-family: Arial, sans-serif; font-size: 11px; max-width: 700px; }
+  .ot-doc p { margin: 3px 0; }
+  .ot-linea { border-bottom: 1px solid #000; margin: 6px 0; min-height: 18px; }
+  .ot-bloque { margin-top: 12px; }
+  .ot-label { font-weight: bold; font-size: 10px; text-transform: uppercase; }
+  .ot-firma-row { display: flex; gap: 20px; margin-top: 10px; }
+  .ot-firma-col { flex: 1; }
+</style>
+<div class="ot-doc">
+  <p style="font-weight:bold">Departamento de Talleres</p>
+  <br>
+  <p style="font-weight:bold">O.T.: ${ot.numero_ot}</p>
+  <div style="display:flex;justify-content:space-between">
+    <div>
+      <p>Sección: ${ot.seccion || ''}</p>
+      <p style="font-weight:bold">R.I.: ${ot.ri || ''}</p>
+      <p>Dependencia: ${ot.dependencia || ''}</p>
+      <p>Solicita: ${ot.legajo_solicita || ''} &nbsp;&nbsp; ${ot.nombre_solicita || ''}</p>
+    </div>
+    <div style="text-align:right">
+      <p>Fecha: ${ot.fecha || ''}</p>
+      <p>Memo n°: ${ot.memo || ''}</p>
+      <p>Odómetro: ${ot.odometro || 0}</p>
+    </div>
+  </div>
+  <p style="margin-top:10px">${(ot.descripcion || '').replace(/\n/g,'<br>')}</p>
+
+  <div class="ot-bloque">
+    <span class="ot-label">TAREAS EFECTUADAS:</span>
+    <div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div>
+  </div>
+  <div class="ot-bloque">
+    <span class="ot-label">REPUESTOS/INSUMOS UTILIZADOS:</span>
+    <div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div>
+  </div>
+  <div class="ot-bloque">
+    <span class="ot-label">LEG. AGENTE INTERVINIENTES:</span>
+    <div class="ot-linea"></div>
+  </div>
+  <div class="ot-bloque">
+    <span class="ot-label">CANTIDAD DE HORAS UTILIZADAS:</span>
+    <div class="ot-linea"></div>
+  </div>
+  <br>
+  <div style="display:flex;gap:40px">
+    <p>Fecha y Hora Entrada: _______________</p>
+    <p>Fecha y Hora Salida: _______________</p>
+  </div>
+  <div style="display:flex;gap:20px;margin-top:8px">
+    <p>Firma: ____________</p>
+    <p>Aclaración: ____________________</p>
+    <p>Legajo: _____</p>
+    <p>Fecha: _______</p>
+  </div>
+</div>`;
+  setTimeout(() => window.print(), 200);
+}
+
+function imprimirVale(v) {
+  if (!v) return;
+  const pa = document.getElementById('print-area');
+  const numFormato = String(v.numero_vale).padStart(7, '0');
+  const itemsRows = (v.items || []).map(i =>
+    `<tr><td style="border:1px solid #000;padding:4px 6px;text-align:center">${i.cant}</td>
+     <td style="border:1px solid #000;padding:4px 6px">${i.desc}</td></tr>`
+  ).join('');
+  // Filas vacías para completar la tabla (mínimo 6)
+  const vacias = Math.max(0, 6 - (v.items || []).length);
+  const filasVacias = Array(vacias).fill(`<tr><td style="border:1px solid #000;height:22px">&nbsp;</td><td style="border:1px solid #000">&nbsp;</td></tr>`).join('');
+
+  pa.innerHTML = `
+<style>
+  @media print {
+    @page { size: A4; margin: 15mm; }
+    body { font-family: Arial, sans-serif; font-size: 11px; }
+  }
+  .vale-doc { font-family: Arial, sans-serif; font-size: 11px; max-width: 700px; }
+  .vale-hdr { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px; }
+  .vale-datos { display: flex; justify-content: space-between; margin-bottom: 10px; }
+  .vale-firma-row { display: flex; border-top: 1px solid #000; margin-top: 10px; }
+  .vale-firma-col { flex: 1; padding: 6px; border-right: 1px solid #000; font-size: 10px; }
+  .vale-firma-col:last-child { border-right: none; }
+</style>
+<div class="vale-doc">
+  <div class="vale-hdr">
+    <div>
+      <p style="font-weight:bold;font-size:13px">MUNICIPALIDAD DE BAHÍA BLANCA</p>
+      <p style="font-size:10px">DEPARTAMENTO TALLERES</p>
+    </div>
+    <div style="text-align:center">
+      <p style="font-weight:bold;font-size:13px">VALE DE MATERIALES</p>
+    </div>
+    <div style="font-weight:bold;font-size:16px">${numFormato}</div>
+  </div>
+
+  <div class="vale-datos">
+    <div>
+      <p>DEPENDENCIA: ${v.dependencia || ''}</p>
+      <p>CÓDIGO U.D. Nº: ${v.codigo_ud || ''}</p>
+      <p>CUENTAS DE GASTOS: ___________________________</p>
+    </div>
+    <div style="text-align:right">
+      <p>O/T &nbsp;&nbsp; N° ${v.numero_ot || '___________'}</p>
+      <p>&nbsp;</p>
+      <p>R.I. &nbsp; Letra <b>${(v.ri || '').charAt(0)}</b> &nbsp;&nbsp; N° <b>${(v.ri || '').slice(1)}</b></p>
+    </div>
+  </div>
+
+  <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
+    <thead>
+      <tr>
+        <th style="border:1px solid #000;padding:4px;width:80px;text-align:center">CANTIDAD</th>
+        <th style="border:1px solid #000;padding:4px;text-align:center">DESCRIPCIÓN</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemsRows}
+      ${filasVacias}
+    </tbody>
+  </table>
+
+  <div class="vale-firma-row">
+    <div class="vale-firma-col" style="width:120px"><p style="font-weight:bold">FIRMA</p></div>
+    <div class="vale-firma-col"><p style="font-weight:bold">ACLARACIÓN</p></div>
+    <div class="vale-firma-col" style="width:100px"><p style="font-weight:bold">FECHA</p></div>
+    <div class="vale-firma-col" style="width:80px"><p style="font-weight:bold">HORA</p></div>
+    <div class="vale-firma-col"><p style="font-weight:bold">DEPTO. COMPRAS</p></div>
+  </div>
+  <div class="vale-firma-row">
+    <div class="vale-firma-col" style="height:40px"><p style="font-size:10px;color:#555">SOLICITA</p></div>
+    <div class="vale-firma-col"><p style="font-size:10px;color:#555">${v.nombre_solicita || ''}</p></div>
+    <div class="vale-firma-col"><p style="font-size:10px;color:#555">${v.fecha || ''}</p></div>
+    <div class="vale-firma-col"></div>
+    <div class="vale-firma-col"></div>
+  </div>
+  <div class="vale-firma-row">
+    <div class="vale-firma-col" style="height:40px"><p style="font-size:10px;color:#555">RETIRA</p></div>
+    <div class="vale-firma-col"></div>
+    <div class="vale-firma-col"></div>
+    <div class="vale-firma-col"></div>
+    <div class="vale-firma-col"></div>
+  </div>
+</div>`;
+  setTimeout(() => window.print(), 200);
+}
