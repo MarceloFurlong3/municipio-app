@@ -84,7 +84,7 @@ function letraRI(ri) {
   return m ? m[0].toUpperCase() : s.charAt(0).toUpperCase();
 }
 
-const ORDEN_ESTADO = { 'Iniciado': 0, 'aprobado': 1, 'pase a fisico': 2, 'Pendiente': 3, 'Pase a Firma': 4 };
+const ORDEN_ESTADO = { 'Iniciado': 0, 'pase a fisico': 1, 'Pendiente': 2 };
 function ordenEstado(e) { return ORDEN_ESTADO[e] ?? 5; }
 
 function fechaOrden(fecha) {
@@ -172,9 +172,8 @@ function renderSelectorPresupuesto(v) {
 // ── TIMELINE DE ESTADOS ───────────────────────────────────────────────────────
 function renderTimeline(sol) {
   const pasos = [
-    { label: 'Iniciado',    fecha: sol.fecha_iniciado,  clase: 'estado-iniciado' },
-    { label: 'Aprobado',    fecha: sol.fecha_aprobado,  clase: 'estado-aprobado' },
-    { label: 'A Físico',    fecha: sol.fecha_fisico,    clase: 'estado-fisico'   },
+    { label: 'Iniciado',  fecha: sol.fecha_iniciado, clase: 'estado-iniciado' },
+    { label: 'A Físico',  fecha: sol.fecha_fisico,   clase: 'estado-fisico'   },
   ];
   const tieneAlguna = pasos.some(p => p.fecha);
   if (!tieneAlguna) return '';
@@ -414,20 +413,12 @@ function renderAcciones(sol) {
 
   btns.push(`<div class="modal-acciones-title">Acciones</div>`);
 
-  if (!aprobado) {
-    btns.push(`<button class="btn-accion btn-aprobar" onclick="window._aprobar()"><i data-lucide="check-circle"></i>Aprobar carga</button>`);
+  // Flujo simplificado: 2 pasos solamente
+  if (!flujo || flujo === 'Pendiente' || flujo === 'Pase a Firma') {
+    btns.push(`<button class="btn-accion btn-iniciado" onclick="window._cambiarEstado('Iniciado')"><i data-lucide="play-circle"></i>Iniciar</button>`);
   }
-
-  if (aprobado) {
-    if (!flujo || flujo === 'Pendiente' || flujo === 'Pase a Firma') {
-      btns.push(`<button class="btn-accion btn-iniciado" onclick="window._cambiarEstado('Iniciado')"><i data-lucide="play-circle"></i>Marcar Iniciado</button>`);
-    }
-    if (flujo === 'Iniciado') {
-      btns.push(`<button class="btn-accion btn-aprobado" onclick="window._cambiarEstado('aprobado')"><i data-lucide="thumbs-up"></i>Aprobar</button>`);
-    }
-    if (flujo === 'aprobado') {
-      btns.push(`<button class="btn-accion btn-fisico" onclick="window._cambiarEstado('pase a fisico')"><i data-lucide="package-check"></i>Pase a Físico</button>`);
-    }
+  if (flujo === 'Iniciado') {
+    btns.push(`<button class="btn-accion btn-fisico" onclick="window._cambiarEstado('pase a fisico')"><i data-lucide="package-check"></i>Pase a Físico</button>`);
   }
 
   if (flujo !== 'pase a fisico') {
@@ -480,11 +471,12 @@ window._cambiarEstado = async function(estado) {
   if (!solicitudActual) return;
   const tipo = solicitudActual.tipo;
 
-  if (estado === 'Iniciado' && !solicitudActual.num_suministro) {
+  // Si no tiene suministro → pedirlo antes de Iniciar
+  if (estado === 'Iniciado' && (!solicitudActual.num_suministro || solicitudActual.num_suministro === 'Pendiente')) {
     const inp = document.getElementById('modal-suministro');
     const num = inp ? inp.value.trim() : '';
     if (!num) {
-      toast('⚠️ Ingresá el N° de Suministro antes de continuar', 'err');
+      toast('⚠️ Ingresá el N° de Suministro primero', 'err');
       if (inp) inp.focus();
       return;
     }
@@ -492,6 +484,16 @@ window._cambiarEstado = async function(estado) {
     setBtnLoading(true);
     const rs = await apiPost({ action: 'setSuministro', fila: solicitudActual.fila, valor: num });
     if (rs.error) { setBtnLoading(false); toast('❌ Error al guardar suministro', 'err'); return; }
+  }
+
+  // Si no tiene OC → pedirla antes de Pase a Físico
+  if (estado === 'pase a fisico' && (!solicitudActual.oc || solicitudActual.oc === 'Pendiente')) {
+    const oc = prompt('N° de Orden de Compra:');
+    if (!oc || !oc.trim()) { toast('⚠️ Ingresá la Orden de Compra primero', 'err'); return; }
+    solicitudActual.oc = oc.trim();
+    setBtnLoading(true);
+    const ro = await apiPost({ action: 'setOrdenCompra', fila: solicitudActual.fila, valor: oc.trim() });
+    if (ro.error) { setBtnLoading(false); toast('❌ Error al guardar OC', 'err'); return; }
   } else {
     setBtnLoading(true);
   }

@@ -329,48 +329,78 @@ function aprobarSolicitud(fila, valor) {
 }
 
 // ── CAMBIAR ESTADO FLUJO (Col I) ──────────────────────────────────────────────
+// Estados válidos: 'Iniciado' | 'pase a fisico'
 function cambiarEstado(fila, estado) {
-  var estados = ['Iniciado', 'aprobado', 'pase a fisico'];
+  var estados = ['Iniciado', 'pase a fisico'];
   if (estados.indexOf(estado) === -1) return { error: 'Estado inválido' };
   try {
     var sh = getSpreadsheet().getSheetByName(HOJA_SOL);
+
+    // Aprobar automáticamente si no estaba aprobado (col F)
+    sh.getRange(fila, 6).setValue(true);
     sh.getRange(fila, 9).setValue(estado);
 
-    var id        = sh.getRange(fila, 1).getValue();
-    var ri        = sh.getRange(fila, 3).getValue();
-    var detalle   = sh.getRange(fila, 13).getValue();
-    var suministro= sh.getRange(fila, 8).getValue();
-    var email     = sh.getRange(fila, 17).getValue();
-    var lastCol   = sh.getLastColumn();
-    var fecha     = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+    var id         = sh.getRange(fila, 1).getValue();
+    var ri         = sh.getRange(fila, 3).getValue();
+    var memo       = sh.getRange(fila, 4).getValue();   // Col D
+    var presupuesto= sh.getRange(fila, 5).getValue();   // Col E
+    var suministro = sh.getRange(fila, 8).getValue();   // Col H
+    var oc         = sh.getRange(fila, 11).getValue();  // Col K
+    var detalle    = sh.getRange(fila, 13).getValue();  // Col M
+    var email      = sh.getRange(fila, 17).getValue();  // Col Q
+    var esId       = String(id).toUpperCase();
+    var lastCol    = sh.getLastColumn();
+    var fecha      = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+
+    // Para PIB: siempre va a depósito
+    var destino = email;
+    if (esId.startsWith('PIB')) {
+      destino = 'depositotalleres@bahiablanca.gov.ar';
+    }
+
+    function linkOTexto(val) {
+      if (!val || String(val).trim() === '' || String(val) === 'Pendiente') return '<em>No adjuntado</em>';
+      var s = String(val).trim();
+      if (s.startsWith('http')) return '<a href="' + s + '">Ver documento</a>';
+      return s;
+    }
 
     if (estado === 'Iniciado') {
       sh.getRange(fila, 2, 1, lastCol - 1).setBackgroundRGB(245, 255, 176);
       sh.getRange(fila, 23).setValue(fecha);
-      if (email) {
-        var body = '<p>Se ha cargado el proceso en SGC.</p>'
-          + '<p>N° de Suministro: <strong>' + suministro + '</strong></p>'
-          + '<p>Solicitud: ' + detalle + '</p>'
-          + '<p>RI: ' + ri + '</p>'
-          + '<p>Gracias.</p><em>Dirección de talleres</em>';
-        GmailApp.sendEmail(email, 'Registro número ' + id, '', { name: 'Direccion de talleres BHI', htmlBody: body });
+      if (destino) {
+        var body = ''
+          + '<p>Se cargó la solicitud <strong>' + id + '</strong> en el sistema.</p>'
+          + '<p><strong>N° de Suministro asignado: ' + suministro + '</strong></p>'
+          + '<hr>'
+          + '<p><strong>RI:</strong> ' + ri + '</p>'
+          + '<p><strong>Detalle:</strong> ' + detalle + '</p>'
+          + '<p><strong>Memo:</strong> ' + linkOTexto(memo) + '</p>'
+          + '<p><strong>Presupuesto:</strong> ' + linkOTexto(presupuesto) + '</p>'
+          + '<br><p>Gracias.</p><em>Dirección de Talleres</em>';
+        GmailApp.sendEmail(destino, 'Registro ' + id + ' — Suministro N° ' + suministro, '', {
+          name: 'Dirección de Talleres BHI', htmlBody: body
+        });
       }
-    }
-
-    if (estado === 'aprobado') {
-      sh.getRange(fila, 2, 1, lastCol - 1).setBackgroundRGB(245, 255, 176);
-      sh.getRange(fila, 24).setValue(fecha);
     }
 
     if (estado === 'pase a fisico') {
       sh.getRange(fila, 2, 1, lastCol - 1).setBackgroundRGB(255, 215, 145);
       sh.getRange(fila, 25).setValue(fecha);
-      if (email) {
-        var body2 = '<p>Se ha aprobado el proceso.</p>'
-          + '<p>El suministro <strong>' + suministro + '</strong> ya se puede visualizar en la mesa de entrada.</p>'
-          + '<p>Solicitud: ' + detalle + '</p>'
-          + '<p>Gracias.</p><em>Dirección de talleres</em>';
-        GmailApp.sendEmail(email, 'Registro número ' + id, '', { name: 'Direccion de talleres BHI', htmlBody: body2 });
+      if (destino) {
+        var body2 = ''
+          + '<p>La solicitud <strong>' + id + '</strong> tiene Orden de Compra aprobada y está disponible en mesa de entrada.</p>'
+          + '<p><strong>Orden de Compra: ' + oc + '</strong></p>'
+          + '<p><strong>Suministro: ' + suministro + '</strong></p>'
+          + '<hr>'
+          + '<p><strong>RI:</strong> ' + ri + '</p>'
+          + '<p><strong>Detalle:</strong> ' + detalle + '</p>'
+          + '<p><strong>Memo:</strong> ' + linkOTexto(memo) + '</p>'
+          + '<p><strong>Presupuesto:</strong> ' + linkOTexto(presupuesto) + '</p>'
+          + '<br><p>Gracias.</p><em>Dirección de Talleres</em>';
+        GmailApp.sendEmail(destino, 'Registro ' + id + ' — Pase a Físico (OC: ' + oc + ')', '', {
+          name: 'Dirección de Talleres BHI', htmlBody: body2
+        });
       }
     }
 
