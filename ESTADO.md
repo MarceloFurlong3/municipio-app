@@ -41,4 +41,4 @@
 - Regla: herramienta de ayuda, NO de control
 
 ## Último commit (auto)
-`2026-07-24 13:41` — feat: eliminar pedidos con basurero (soft delete) + boton recuperar
+`2026-07-24 13:55` — docs: actualizar ESTADO.md con todo lo hecho en la sesion 2026-07-24
