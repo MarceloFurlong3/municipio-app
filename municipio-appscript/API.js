@@ -37,7 +37,10 @@ function doPostAPI(e) {
   if (data.action === 'setOrdenCompra')   return respJSON(setCeldaSolicitud(data.fila, 11, data.valor));
   if (data.action === 'setOC')            return respJSON(setOrdenCompra(data.fila, data.oc, data.proveedor));
   if (data.action === 'setObservaciones') return respJSON(setCeldaSolicitud(data.fila, 14, data.valor));
-  if (data.action === 'limpiarRechazo')   return respJSON(limpiarRechazo(data.fila));
+  if (data.action === 'limpiarRechazo')      return respJSON(limpiarRechazo(data.fila));
+  if (data.action === 'eliminarSolicitud')   return respJSON(eliminarSolicitud(data.fila));
+  if (data.action === 'recuperarSolicitud')  return respJSON(recuperarSolicitud(data.fila));
+  if (data.action === 'getEliminadas')       return respJSON(getEliminadas());
 
   // ── ÓRDENES DE TRABAJO ──
   if (data.action === 'crearOT')    return respJSON(crearOT(data));
@@ -523,6 +526,85 @@ function limpiarRechazo(fila) {
     } else {
       sh.getRange(fila, 2, 1, lastCol - 1).setBackground(null);
     }
+    return { ok: true };
+  } catch(err) { return { error: err.message }; }
+}
+
+// ── BASURERO — soft delete, nunca se borra definitivamente ───────────────────
+function _getSheetEliminadas() {
+  var ss = getSpreadsheet();
+  var sh = ss.getSheetByName('Solicitudes Eliminadas');
+  if (!sh) {
+    sh = ss.insertSheet('Solicitudes Eliminadas');
+    sh.getRange(1, 1).setValue('fecha_eliminacion');
+    sh.getRange(1, 2).setValue('fila_original');
+    sh.getRange(1, 1, 1, 2).setFontWeight('bold');
+  }
+  return sh;
+}
+
+function eliminarSolicitud(fila) {
+  try {
+    var ss = getSpreadsheet();
+    var shSol = ss.getSheetByName(HOJA_SOL);
+    var shBas = _getSheetEliminadas();
+    var lastCol = shSol.getLastColumn();
+
+    // Copiar toda la fila al basurero
+    var datos = shSol.getRange(fila, 1, 1, lastCol).getValues()[0];
+    var fecha = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm');
+    var fila_destino = shBas.getLastRow() + 1;
+
+    // Primera col = fecha eliminación, segunda = fila original, resto = datos
+    shBas.getRange(fila_destino, 1).setValue(fecha);
+    shBas.getRange(fila_destino, 2).setValue(fila);
+    if (datos.length > 0) {
+      shBas.getRange(fila_destino, 3, 1, datos.length).setValues([datos]);
+    }
+
+    // Borrar la fila original del Sheet activo
+    shSol.deleteRow(fila);
+    SpreadsheetApp.flush();
+    return { ok: true };
+  } catch(err) { return { error: err.message }; }
+}
+
+function getEliminadas() {
+  try {
+    var sh = _getSheetEliminadas();
+    var last = sh.getLastRow();
+    if (last < 2) return { eliminadas: [] };
+    var rows = sh.getRange(2, 1, last - 1, sh.getLastColumn()).getDisplayValues();
+    var eliminadas = rows.filter(r => r[2]).map((r, i) => ({
+      fila_bas: i + 2,
+      fecha_eliminacion: r[0],
+      fila_original: r[1],
+      id: r[2], fecha: r[3], ri: r[4],
+      memo: r[5], presupuesto: r[6],
+      suministro: r[9], estado_flujo: r[10],
+      oc: r[12], oficina: r[13], detalle: r[14]
+    }));
+    return { eliminadas };
+  } catch(err) { return { error: err.message }; }
+}
+
+function recuperarSolicitud(fila_bas) {
+  try {
+    var ss = getSpreadsheet();
+    var shBas = _getSheetEliminadas();
+    var shSol = ss.getSheetByName(HOJA_SOL);
+    var lastCol = shBas.getLastColumn();
+
+    // Leer la fila del basurero (cols 3 en adelante son los datos originales)
+    var datos = shBas.getRange(fila_bas, 3, 1, lastCol - 2).getValues()[0];
+
+    // Agregar al final de Solicitudes Generales
+    var nuevaFila = shSol.getLastRow() + 1;
+    shSol.getRange(nuevaFila, 1, 1, datos.length).setValues([datos]);
+
+    // Borrar del basurero
+    shBas.deleteRow(fila_bas);
+    SpreadsheetApp.flush();
     return { ok: true };
   } catch(err) { return { error: err.message }; }
 }

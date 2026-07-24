@@ -434,6 +434,8 @@ function renderAcciones(sol) {
     `);
   }
 
+  btns.push(`<button class="btn-accion" style="background:#fee2e2;color:#991b1b;margin-top:8px" onclick="window._eliminar()"><i data-lucide="trash-2"></i>Eliminar pedido</button>`);
+
   cont.innerHTML = btns.join('');
   if (window.lucide) lucide.createIcons();
 }
@@ -590,6 +592,76 @@ window._guardarOCModal = async function(input) {
     toast('✅ OC guardada', 'ok');
   } catch(e) { toast('❌ ' + e.message, 'err'); }
   input.disabled = false;
+};
+
+// ── ELIMINAR (soft delete → basurero) ────────────────────────────────────────
+window._eliminar = async function() {
+  if (!solicitudActual) return;
+  if (!confirm(`¿Eliminar "${solicitudActual.id}"?\nVa al basurero — podés recuperarlo después.`)) return;
+  const tipo = solicitudActual.tipo;
+  setBtnLoading(true);
+  try {
+    const r = await apiPost({ action: 'eliminarSolicitud', fila: solicitudActual.fila });
+    if (r.error) throw new Error(r.error);
+    toast('🗑 Movido al basurero', 'ok');
+    // Quitar de la lista local
+    if (tipo === 'bhi') dataBHI = dataBHI.filter(s => s.fila !== solicitudActual.fila);
+    else dataPIB = dataPIB.filter(s => s.fila !== solicitudActual.fila);
+    cerrarModal();
+    renderCards(tipo);
+  } catch(e) { setBtnLoading(false); toast('❌ ' + e.message, 'err'); }
+};
+
+// ── BASURERO ──────────────────────────────────────────────────────────────────
+window.abrirBasurero = async function() {
+  const overlay = document.createElement('div');
+  overlay.id = 'bas-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;display:flex;align-items:flex-end;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:18px 18px 0 0;width:100%;max-width:600px;padding:20px;max-height:85vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:16px;font-weight:800">🗑 Basurero</div>
+        <button onclick="document.getElementById('bas-overlay').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#64748b">×</button>
+      </div>
+      <div id="bas-lista"><div style="text-align:center;padding:20px;color:#94a3b8">Cargando...</div></div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  try {
+    const r = await apiPost({ action: 'getEliminadas' });
+    const lista = r.eliminadas || [];
+    const el = document.getElementById('bas-lista');
+    if (!lista.length) {
+      el.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8">El basurero está vacío</div>';
+      return;
+    }
+    el.innerHTML = lista.map(s => `
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:14px;font-weight:800;color:#0b1b35">${s.id}</span>
+          <span style="font-size:10px;color:#94a3b8">Eliminado: ${s.fecha_eliminacion}</span>
+        </div>
+        <div style="font-size:12px;color:#334155">RI: ${s.ri||'—'} · ${s.oficina||'—'}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px">${s.detalle||''}</div>
+        <button onclick="window._recuperar(${s.fila_bas})"
+          style="margin-top:10px;width:100%;padding:8px;background:#dcfce7;color:#166534;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+          ↩ Recuperar
+        </button>
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('bas-lista').innerHTML = '<div style="color:#ef4444;padding:20px">Error al cargar</div>';
+  }
+};
+
+window._recuperar = async function(fila_bas) {
+  if (!confirm('¿Recuperar esta solicitud?')) return;
+  try {
+    const r = await apiPost({ action: 'recuperarSolicitud', fila: fila_bas });
+    if (r.error) throw new Error(r.error);
+    toast('✅ Solicitud recuperada', 'ok');
+    document.getElementById('bas-overlay')?.remove();
+    await cargar(true);
+  } catch(e) { toast('❌ ' + e.message, 'err'); }
 };
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
