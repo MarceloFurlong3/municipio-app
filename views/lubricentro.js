@@ -267,9 +267,10 @@ function filtrarKitsPorEstado(estado) {
   renderKits();
 }
 
-function abrirKitDetalle(id) {
+async function abrirKitDetalle(id) {
   const k = kits.find(x => x.id === id);
   if (!k) return;
+
   const campos = [
     ['Filtro de aceite',       k.filtro_aceite],
     ['Filtro de aire',         k.filtro_aire],
@@ -294,7 +295,34 @@ function abrirKitDetalle(id) {
   document.getElementById('kdet-filas').innerHTML    = filas;
   document.getElementById('kdet-notas').textContent  = k.notas || '';
   document.getElementById('kdet-notas-wrap').style.display = k.notas ? 'block' : 'none';
+  document.getElementById('kdet-vales').innerHTML = '<div class="kdet-nd" style="padding:8px 0">Cargando vales...</div>';
   document.getElementById('lub-modal-kit').classList.add('vis');
+
+  // Cargar fotos de vales para los RIs de este modelo
+  const ris = k.ris || [];
+  if (!ris.length) {
+    document.getElementById('kdet-vales').innerHTML = '<div class="kdet-nd" style="padding:8px 0">Sin RIs asociados</div>';
+    return;
+  }
+  try {
+    const query = ris.map(r => `ri=eq.${encodeURIComponent(r)}`).join('&');
+    const r = await fetch(
+      SUPA_NK_URL + '/rest/v1/flota_fotos?select=ri,url&or=(' + ris.map(r => `ri.eq.${r}`).join(',') + ')&limit=50',
+      { headers: { apikey: SUPA_NK_KEY, Authorization: 'Bearer ' + SUPA_NK_KEY } }
+    );
+    const fotos = await r.json();
+    if (!fotos.length) {
+      document.getElementById('kdet-vales').innerHTML = '<div class="kdet-nd" style="padding:8px 0">Sin fotos de vales cargadas</div>';
+      return;
+    }
+    document.getElementById('kdet-vales').innerHTML = fotos.map(f => `
+      <div class="kdet-vale">
+        <div class="kdet-vale-ri">${f.ri}</div>
+        <img class="kdet-vale-img" src="${f.url}" loading="lazy" onclick="this.classList.toggle('expandida')">
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('kdet-vales').innerHTML = '<div class="kdet-nd" style="padding:8px 0">Error cargando fotos</div>';
+  }
 }
 
 // ── HTML ──────────────────────────────────────────────────────────────────────
@@ -447,6 +475,12 @@ function getHTML() { return `
 .kdet-lbl { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
 .kdet-val { font-size:14px; font-weight:700; color:#0f172a; }
 .kdet-nd  { font-weight:400; color:#94a3b8; font-style:italic; }
+.kdet-vales-titulo { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin:14px 0 8px; }
+.kdet-vales-wrap { display:flex; flex-direction:column; gap:10px; }
+.kdet-vale { background:#f8fafc; border:1.5px solid #e4eaf5; border-radius:10px; overflow:hidden; }
+.kdet-vale-ri { font-size:11px; font-weight:700; color:#64748b; padding:6px 10px; background:#f1f5f9; }
+.kdet-vale-img { width:100%; display:block; cursor:zoom-in; max-height:220px; object-fit:contain; background:#000; transition:max-height .3s; }
+.kdet-vale-img.expandida { max-height:600px; cursor:zoom-out; }
 </style>
 
 <div class="lub-wrap">
@@ -518,6 +552,8 @@ function getHTML() { return `
     <div id="kdet-notas-wrap" style="margin-top:12px;padding:10px 14px;background:#fef9c3;border-radius:10px;font-size:13px;color:#92400e">
       <strong>Notas:</strong> <span id="kdet-notas"></span>
     </div>
+    <div class="kdet-vales-titulo">Fotos de vales</div>
+    <div class="kdet-vales-wrap" id="kdet-vales"></div>
     <button class="btn-lub-cerrar" id="btn-kdet-cerrar" style="margin-top:16px">Cerrar</button>
   </div>
 </div>
