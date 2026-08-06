@@ -36,6 +36,10 @@ const SERVICE_DEFAULT = [
   { id:14, fecha:'2026-08-03', ri:'A644', modelo:'Corsa',          dep:'',                       nota:'',                        estado:'pendiente' },
 ];
 
+// Supabase NK/Flota (donde vive kits_filtros)
+const SUPA_NK_URL = 'https://sugkmcdngvtvwzglodkh.supabase.co';
+const SUPA_NK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1Z2ttY2RuZ3Z0dnd6Z2xvZGtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwNjk5ODMsImV4cCI6MjA5ODY0NTk4M30.hL-0sa0ZmeY7iZ_Zy50Dy8k8oxqbYlc4cWZ82HDiEbM';
+
 const ACEITES_KEY = 'inventario_aceites';
 const ACEITES_VER = 'v4';
 const SERVICE_KEY = 'lubricentro_service';
@@ -44,6 +48,8 @@ const PASSWORD    = 'toro';
 
 let aceites     = [];
 let services    = [];
+let kits        = [];
+let kitsFiltrados = [];
 let adminActivo = false;
 let editId      = null;
 
@@ -186,6 +192,111 @@ function renderService() {
   wrap.innerHTML = html;
 }
 
+// ── Kits de filtros ───────────────────────────────────────────────────────────
+async function cargarKits() {
+  const el = document.getElementById('kits-lista');
+  if (el) el.innerHTML = '<div class="kits-loading">Cargando...</div>';
+  try {
+    const r = await fetch(
+      SUPA_NK_URL + '/rest/v1/kits_filtros?select=*&order=modelo.asc&limit=500',
+      { headers: { apikey: SUPA_NK_KEY, Authorization: 'Bearer ' + SUPA_NK_KEY } }
+    );
+    kits = await r.json();
+  } catch(e) {
+    kits = [];
+  }
+  kitsFiltrados = [...kits];
+  renderKits();
+  actualizarBadgeKits();
+}
+
+function actualizarBadgeKits() {
+  const pendientes = kits.filter(k => !k.verificado).length;
+  const badge = document.getElementById('lub-badge-kits');
+  if (badge) badge.textContent = pendientes || '';
+}
+
+function renderKits() {
+  const lista = document.getElementById('kits-lista');
+  if (!lista) return;
+
+  const total      = kits.length;
+  const verificados = kits.filter(k => k.verificado).length;
+  const pendientes  = total - verificados;
+
+  document.getElementById('kits-stat-total').textContent      = total;
+  document.getElementById('kits-stat-ok').textContent         = verificados;
+  document.getElementById('kits-stat-pendiente').textContent  = pendientes;
+
+  if (!kitsFiltrados.length) {
+    lista.innerHTML = '<div class="kits-vacio">Sin resultados</div>';
+    return;
+  }
+
+  lista.innerHTML = kitsFiltrados.map(k => {
+    const ok = k.verificado;
+    const tieneData = k.filtro_aceite || k.filtro_aire || k.filtro_combustible;
+    const badge = ok
+      ? '<span class="kit-badge ok">Vale fisico</span>'
+      : tieneData
+        ? '<span class="kit-badge warn">Sin verificar</span>'
+        : '<span class="kit-badge empty">Sin datos</span>';
+    return `
+      <div class="kit-row" data-id="${k.id}" onclick="abrirKitDetalle('${k.id}')">
+        <div class="kit-row-body">
+          <div class="kit-modelo">${k.modelo}</div>
+          <div class="kit-row-meta">${badge}${k.fuente ? `<span class="kit-fuente">${k.fuente}</span>` : ''}</div>
+        </div>
+        <div class="kit-row-arrow">›</div>
+      </div>`;
+  }).join('');
+}
+
+function filtrarKits(q) {
+  const txt = q.trim().toUpperCase();
+  kitsFiltrados = txt ? kits.filter(k => k.modelo.includes(txt)) : [...kits];
+  renderKits();
+}
+
+function filtrarKitsPorEstado(estado) {
+  document.querySelectorAll('.kit-pill').forEach(p => p.classList.remove('activa'));
+  document.getElementById('kit-pill-' + estado).classList.add('activa');
+  if (estado === 'todos')      kitsFiltrados = [...kits];
+  else if (estado === 'ok')    kitsFiltrados = kits.filter(k => k.verificado);
+  else if (estado === 'sin')   kitsFiltrados = kits.filter(k => !k.verificado);
+  renderKits();
+}
+
+function abrirKitDetalle(id) {
+  const k = kits.find(x => x.id === id);
+  if (!k) return;
+  const campos = [
+    ['Filtro de aceite',       k.filtro_aceite],
+    ['Filtro de aire',         k.filtro_aire],
+    ['Filtro de combustible',  k.filtro_combustible],
+    ['Filtro de habitaculo',   k.filtro_habitaculo],
+    ['Filtro hidraulico',      k.filtro_hidraulico],
+  ];
+  const filas = campos.map(([lbl, val]) => `
+    <div class="kdet-fila${val ? '' : ' vacio'}">
+      <div class="kdet-lbl">${lbl}</div>
+      <div class="kdet-val">${val || '<span class="kdet-nd">Sin datos</span>'}</div>
+    </div>`).join('');
+
+  const estado = k.verificado
+    ? '<span class="kit-badge ok">Vale fisico verificado</span>'
+    : k.fuente
+      ? '<span class="kit-badge warn">Fuente: ' + k.fuente + ' — sin verificar</span>'
+      : '<span class="kit-badge empty">Sin datos todavia</span>';
+
+  document.getElementById('kdet-titulo').textContent = k.modelo;
+  document.getElementById('kdet-estado').innerHTML   = estado;
+  document.getElementById('kdet-filas').innerHTML    = filas;
+  document.getElementById('kdet-notas').textContent  = k.notas || '';
+  document.getElementById('kdet-notas-wrap').style.display = k.notas ? 'block' : 'none';
+  document.getElementById('lub-modal-kit').classList.add('vis');
+}
+
 // ── HTML ──────────────────────────────────────────────────────────────────────
 function getHTML() { return `
 <style>
@@ -307,6 +418,35 @@ function getHTML() { return `
 .lub-pass-err.vis { display:block; }
 .btn-lub-desbloquear { width:100%; padding:13px; background:#f59e0b; border:none; border-radius:10px; font-family:'Barlow',sans-serif; font-size:14px; font-weight:800; color:#fff; cursor:pointer; margin-bottom:8px; }
 .btn-lub-cancelar { width:100%; padding:11px; background:transparent; border:1.5px solid #e4eaf5; border-radius:10px; font-family:'Barlow',sans-serif; font-size:13px; font-weight:700; color:#64748b; cursor:pointer; }
+
+/* ── Kits ── */
+.kits-buscador-wrap { margin-bottom:10px; }
+.kits-buscador { width:100%; padding:10px 14px; border:1.5px solid #e4eaf5; border-radius:10px; font-family:'Barlow',sans-serif; font-size:14px; outline:none; background:#fff; }
+.kits-buscador:focus { border-color:#0b1b35; }
+.kit-pills { display:flex; gap:8px; margin-bottom:12px; overflow-x:auto; scrollbar-width:none; }
+.kit-pills::-webkit-scrollbar { display:none; }
+.kit-pill { padding:6px 16px; border-radius:99px; border:1.5px solid #e4eaf5; background:#f8fafc; font-family:'Barlow',sans-serif; font-size:12px; font-weight:700; color:#64748b; cursor:pointer; white-space:nowrap; transition:all .15s; }
+.kit-pill.activa { background:#0b1b35; color:#fff; border-color:#0b1b35; }
+.kits-lista { display:flex; flex-direction:column; gap:6px; }
+.kits-loading { text-align:center; padding:40px; color:#94a3b8; font-size:14px; }
+.kits-vacio   { text-align:center; padding:40px; color:#94a3b8; font-size:14px; }
+.kit-row { background:#fff; border:1.5px solid #e4eaf5; border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:border-color .15s; }
+.kit-row:active { background:#f8fafc; }
+.kit-row-body { flex:1; min-width:0; }
+.kit-modelo { font-size:13px; font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kit-row-meta { display:flex; gap:6px; align-items:center; margin-top:4px; flex-wrap:wrap; }
+.kit-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+.kit-badge.ok    { background:#dcfce7; color:#15803d; }
+.kit-badge.warn  { background:#fef9c3; color:#a16207; }
+.kit-badge.empty { background:#f1f5f9; color:#94a3b8; }
+.kit-fuente { font-size:10px; color:#94a3b8; }
+.kit-row-arrow { font-size:18px; color:#cbd5e1; flex-shrink:0; }
+.kdet-filas { display:flex; flex-direction:column; gap:10px; }
+.kdet-fila { padding:10px 14px; background:#f8fafc; border-radius:10px; border:1.5px solid #e4eaf5; }
+.kdet-fila.vacio { opacity:.5; }
+.kdet-lbl { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+.kdet-val { font-size:14px; font-weight:700; color:#0f172a; }
+.kdet-nd  { font-weight:400; color:#94a3b8; font-style:italic; }
 </style>
 
 <div class="lub-wrap">
@@ -314,6 +454,7 @@ function getHTML() { return `
   <div class="lub-tabs">
     <button class="lub-tab activo" id="lub-tab-aceites">🛢️ Aceites <span class="lub-badge" id="lub-badge-aceites">13</span></button>
     <button class="lub-tab" id="lub-tab-service">🔧 Service <span class="lub-badge" id="lub-badge-service"></span></button>
+    <button class="lub-tab" id="lub-tab-kits">🔩 Kits <span class="lub-badge" id="lub-badge-kits"></span></button>
   </div>
 
   <!-- PANEL ACEITES -->
@@ -347,6 +488,38 @@ function getHTML() { return `
     <div class="lub-srv-cards" id="lub-cards-service"></div>
   </div>
 
+  <!-- PANEL KITS -->
+  <div class="lub-panel" id="lub-panel-kits">
+    <div class="lub-stats">
+      <div class="lub-stat"><div class="lub-stat-num" id="kits-stat-total">—</div><div class="lub-stat-lbl">Modelos</div></div>
+      <div class="lub-stat"><div class="lub-stat-num done" id="kits-stat-ok">—</div><div class="lub-stat-lbl">Con kit</div></div>
+      <div class="lub-stat"><div class="lub-stat-num pend" id="kits-stat-pendiente">—</div><div class="lub-stat-lbl">Pendientes</div></div>
+    </div>
+    <div class="kits-buscador-wrap">
+      <input class="kits-buscador" id="kits-buscador" type="text" placeholder="Buscar modelo..." autocomplete="off">
+    </div>
+    <div class="kit-pills">
+      <button class="kit-pill activa" id="kit-pill-todos" onclick="filtrarKitsPorEstado('todos')">Todos</button>
+      <button class="kit-pill" id="kit-pill-ok"  onclick="filtrarKitsPorEstado('ok')">Con kit</button>
+      <button class="kit-pill" id="kit-pill-sin" onclick="filtrarKitsPorEstado('sin')">Pendientes</button>
+    </div>
+    <div class="kits-lista" id="kits-lista"><div class="kits-loading">Cargando...</div></div>
+  </div>
+
+</div>
+
+<!-- MODAL DETALLE KIT -->
+<div class="lub-modal-bg" id="lub-modal-kit">
+  <div class="lub-modal">
+    <div class="lub-modal-drag"></div>
+    <div class="lub-modal-title" id="kdet-titulo"></div>
+    <div id="kdet-estado" style="margin-bottom:14px"></div>
+    <div class="kdet-filas" id="kdet-filas"></div>
+    <div id="kdet-notas-wrap" style="margin-top:12px;padding:10px 14px;background:#fef9c3;border-radius:10px;font-size:13px;color:#92400e">
+      <strong>Notas:</strong> <span id="kdet-notas"></span>
+    </div>
+    <button class="btn-lub-cerrar" id="btn-kdet-cerrar" style="margin-top:16px">Cerrar</button>
+  </div>
 </div>
 
 <!-- MODAL NUEVO SERVICE -->
@@ -396,17 +569,25 @@ function getHTML() { return `
 
 // ── Eventos ───────────────────────────────────────────────────────────────────
 function bindEventos() {
-  document.getElementById('lub-tab-aceites').addEventListener('click', () => {
-    document.getElementById('lub-tab-aceites').classList.add('activo');
-    document.getElementById('lub-tab-service').classList.remove('activo');
-    document.getElementById('lub-panel-aceites').classList.add('activo');
-    document.getElementById('lub-panel-service').classList.remove('activo');
+  function activarTab(tab) {
+    ['aceites','service','kits'].forEach(t => {
+      document.getElementById('lub-tab-' + t).classList.toggle('activo', t === tab);
+      document.getElementById('lub-panel-' + t).classList.toggle('activo', t === tab);
+    });
+  }
+  document.getElementById('lub-tab-aceites').addEventListener('click', () => activarTab('aceites'));
+  document.getElementById('lub-tab-service').addEventListener('click', () => activarTab('service'));
+  document.getElementById('lub-tab-kits').addEventListener('click', () => {
+    activarTab('kits');
+    if (!kits.length) cargarKits();
   });
-  document.getElementById('lub-tab-service').addEventListener('click', () => {
-    document.getElementById('lub-tab-service').classList.add('activo');
-    document.getElementById('lub-tab-aceites').classList.remove('activo');
-    document.getElementById('lub-panel-service').classList.add('activo');
-    document.getElementById('lub-panel-aceites').classList.remove('activo');
+  document.getElementById('kits-buscador').addEventListener('input', e => filtrarKits(e.target.value));
+  document.getElementById('btn-kdet-cerrar').addEventListener('click', () => {
+    document.getElementById('lub-modal-kit').classList.remove('vis');
+  });
+  document.getElementById('lub-modal-kit').addEventListener('click', e => {
+    if (e.target === document.getElementById('lub-modal-kit'))
+      document.getElementById('lub-modal-kit').classList.remove('vis');
   });
 
   // Admin aceites
@@ -566,10 +747,15 @@ function guardarSrv() {
 export function montarLubricentro(c) {
   aceites     = cargarAceites();
   services    = cargarService();
+  kits        = [];
+  kitsFiltrados = [];
   adminActivo = false;
   c.innerHTML = getHTML();
   if (window.lucide) lucide.createIcons();
   bindEventos();
   renderAceites();
   renderService();
+  // exponer globales para onclick inline
+  window.abrirKitDetalle    = abrirKitDetalle;
+  window.filtrarKitsPorEstado = filtrarKitsPorEstado;
 }
