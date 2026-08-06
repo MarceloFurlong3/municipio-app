@@ -58,6 +58,8 @@
     .area-card.sol:hover { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.6); }
     .area-card.dep { border-color: rgba(21,128,61,.4); }
     .area-card.dep:hover { background: rgba(21,128,61,.1); border-color: rgba(21,128,61,.6); }
+    .area-card.lub { border-color: rgba(245,158,11,.4); }
+    .area-card.lub:hover { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.6); }
     .area-ico {
       width: 52px; height: 52px; border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
@@ -65,6 +67,7 @@
     }
     .area-ico.sol { background: rgba(59,130,246,.2); }
     .area-ico.dep { background: rgba(21,128,61,.2); }
+    .area-ico.lub { background: rgba(245,158,11,.2); }
     .area-info { flex: 1; }
     .area-nombre { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; color: #fff; }
     .area-desc { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 2px; }
@@ -229,6 +232,15 @@
       </div>
       <span class="area-arrow">›</span>
     </div>
+
+    <div class="area-card lub" onclick="entrarArea('lubricentro')">
+      <div class="area-ico lub">🛢️</div>
+      <div class="area-info">
+        <div class="area-nombre">Lubricentro</div>
+        <div class="area-desc">Aceites · Service</div>
+      </div>
+      <span class="area-arrow">›</span>
+    </div>
   </div>
 </div>
 
@@ -316,6 +328,9 @@
   <!-- TALLERES (OT + Vales) -->
   <div class="content" id="panel-talleres"></div>
 
+  <!-- LUBRICENTRO -->
+  <div class="content" id="panel-lubricentro"></div>
+
   <div style="height:70px"></div>
 
   <!-- Bottom nav área Solicitudes -->
@@ -367,13 +382,15 @@
 
 <script type="module" src="views/solicitudes.js"></script>
 <script type="module">
-  import { montarDeposito }  from './views/deposito.js';
-  import { montarTalleres }  from './views/talleres.js';
+  import { montarDeposito }    from './views/deposito.js';
+  import { montarTalleres }    from './views/talleres.js';
+  import { montarLubricentro } from './views/lubricentro.js';
 
-  let depositoCargado   = false;
-  let flotaSolCargada   = false;
-  let talleresCargado   = false;
-  let flotaDepCargada = false;
+  let depositoCargado    = false;
+  let flotaSolCargada    = false;
+  let talleresCargado    = false;
+  let flotaDepCargada    = false;
+  let lubricentroCargado = false;
 
   function activarPanel(panelId) {
     document.querySelectorAll('.content').forEach(p => p.classList.remove('activo'));
@@ -396,6 +413,7 @@
     document.getElementById('pantalla-inicio').style.display = 'none';
     document.getElementById('pantalla-app').classList.add('visible');
 
+    document.getElementById('btn-basurero').style.display = '';
     if (area === 'solicitudes') {
       document.getElementById('nav-titulo').textContent = 'Solicitudes';
       document.getElementById('nav-subtitulo').textContent = 'BHI · PIB · Flota';
@@ -404,6 +422,18 @@
       document.getElementById('nav-dep').style.display = 'none';
       activarPanel('panel-bhi');
       activarBtnSol('nav-sol-solicitudes');
+    } else if (area === 'lubricentro') {
+      document.getElementById('nav-titulo').textContent = 'Lubricentro';
+      document.getElementById('nav-subtitulo').textContent = 'Aceites · Service';
+      document.getElementById('tabs-solicitudes').classList.add('oculto');
+      document.getElementById('nav-sol').style.display = 'none';
+      document.getElementById('nav-dep').style.display = 'none';
+      document.getElementById('btn-basurero').style.display = 'none';
+      activarPanel('panel-lubricentro');
+      if (!lubricentroCargado) {
+        lubricentroCargado = true;
+        montarLubricentro(document.getElementById('panel-lubricentro'));
+      }
     } else {
       document.getElementById('nav-titulo').textContent = 'Depósito';
       document.getElementById('nav-subtitulo').textContent = 'PIB · Flota';
