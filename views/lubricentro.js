@@ -197,11 +197,18 @@ async function cargarKits() {
   const el = document.getElementById('kits-lista');
   if (el) el.innerHTML = '<div class="kits-loading">Cargando...</div>';
   try {
-    const r = await fetch(
-      SUPA_NK_URL + '/rest/v1/kits_filtros?select=*&order=modelo.asc&limit=500',
-      { headers: { apikey: SUPA_NK_KEY, Authorization: 'Bearer ' + SUPA_NK_KEY } }
-    );
-    kits = await r.json();
+    const [rKits, rAlts] = await Promise.all([
+      fetch(SUPA_NK_URL + '/rest/v1/kits_filtros?select=*&order=modelo.asc&limit=500',
+        { headers: { apikey: SUPA_NK_KEY, Authorization: 'Bearer ' + SUPA_NK_KEY } }),
+      fetch(SUPA_NK_URL + '/rest/v1/kits_alternativos?select=*&limit=1000',
+        { headers: { apikey: SUPA_NK_KEY, Authorization: 'Bearer ' + SUPA_NK_KEY } })
+    ]);
+    kits = await rKits.json();
+    const alts = await rAlts.json();
+    // adjuntar alternativos a cada kit por modelo
+    kits.forEach(k => {
+      k._alts = alts.filter(a => a.modelo === k.modelo);
+    });
   } catch(e) {
     kits = [];
   }
@@ -254,7 +261,16 @@ function renderKits() {
 
 function filtrarKits(q) {
   const txt = q.trim().toUpperCase();
-  kitsFiltrados = txt ? kits.filter(k => k.modelo.includes(txt)) : [...kits];
+  if (!txt) { kitsFiltrados = [...kits]; renderKits(); return; }
+  kitsFiltrados = kits.filter(k => {
+    if (k.modelo.toUpperCase().includes(txt)) return true;
+    const campos = [k.filtro_aceite, k.filtro_aire, k.filtro_aire_secundario,
+                    k.filtro_combustible, k.filtro_trampa, k.filtro_transmision];
+    if (campos.some(c => c && c.toUpperCase().includes(txt))) return true;
+    if (Array.isArray(k.ris) && k.ris.some(r => r.toUpperCase().includes(txt))) return true;
+    if (Array.isArray(k._alts) && k._alts.some(a => a.codigo && a.codigo.toUpperCase().includes(txt))) return true;
+    return false;
+  });
   renderKits();
 }
 
