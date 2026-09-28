@@ -19,7 +19,7 @@ export async function montarDeposito(contenedor) {
 function getHTML() { return `
 <style>
 .dep-wrap { font-family:'Barlow',sans-serif; background:#f6f8fc; min-height:100%; padding-bottom:80px; }
-.dep-inner { max-width:900px; margin:0 auto; }
+.dep-inner { max-width:1300px; margin:0 auto; }
 
 /* TABS */
 .dep-tabs { display:flex; background:#fff; border-bottom:2px solid #e4eaf5; padding:0 16px; position:sticky; top:0; z-index:30; box-shadow:0 1px 4px rgba(15,23,42,.06); }
@@ -49,11 +49,11 @@ function getHTML() { return `
 
 /* CARDS */
 .dep-cards { display:flex; flex-direction:column; gap:10px; }
-.dep-card { background:#fff; border-radius:14px; padding:16px 18px; border:1.5px solid #e4eaf5; box-shadow:0 1px 3px rgba(15,23,42,.04); }
+.dep-card { background:#fff; border-radius:14px; padding:16px 18px; border:1.5px solid #dde3ee; box-shadow:0 2px 6px rgba(15,23,42,.07); }
 .dep-card.rechazado { border-color:#fca5a5; background:#fff8f8; }
-.dep-card-hdr { display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+.dep-card-hdr { display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
 .dep-id { font-family:'Barlow Condensed',sans-serif; font-size:17px; font-weight:800; color:#0b1b35; }
-.dep-fecha { font-size:11px; color:#94a3b8; margin-left:auto; }
+.dep-fecha { font-size:11px; color:#64748b; font-weight:700; margin-left:auto; background:#f1f5f9; padding:2px 8px; border-radius:6px; }
 .dep-estado { font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; }
 .dep-est-pendiente { background:#fef9c3; color:#a16207; }
 .dep-est-iniciado  { background:#dcfce7; color:#15803d; }
@@ -61,11 +61,12 @@ function getHTML() { return `
 .dep-est-fisico    { background:#fed7aa; color:#c2410c; }
 .dep-est-rechazado { background:#fecaca; color:#dc2626; }
 
-.dep-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.dep-field { }
-.dep-label { font-size:9px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:2px; }
-.dep-val { font-size:12px; font-weight:600; color:#0f172a; }
+.dep-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.dep-field { background:#f8fafd; border-radius:8px; padding:8px 10px; }
+.dep-label { font-size:10px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
+.dep-val { font-size:13px; font-weight:600; color:#0f172a; }
 .dep-val.full { grid-column:1/-1; }
+.dep-val-clamp { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
 .dep-motivo { margin-top:10px; padding:10px 12px; background:#fef2f2; border-radius:10px; border-left:3px solid #dc2626; font-size:12px; color:#dc2626; font-weight:600; }
 .dep-link { color:#2563eb; text-decoration:underline; word-break:break-all; font-weight:600; font-size:12px; }
 .dep-link:hover { color:#1d4ed8; }
@@ -91,21 +92,32 @@ function getHTML() { return `
 @media(max-width:600px) {
   .dep-grid { grid-template-columns:1fr; }
 }
+@media(min-width:900px) {
+  .dep-grupo-ri .dep-cards { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .dep-panel { padding:20px 24px; }
+  .dep-hdr { margin-bottom:20px; }
+}
 </style>
 
 <div class="dep-wrap">
 <div class="dep-inner">
 
-  <div class="dep-tabs">
-    <button class="dep-tab activo" id="dep-tab-pedidos">
-      <i data-lucide="clipboard-list"></i>
-      Mis pedidos <span class="dep-badge" id="dep-badge-ped">0</span>
-    </button>
-    <button class="dep-tab rec" id="dep-tab-rechazados">
-      <i data-lucide="x-circle"></i>
-      Rechazados <span class="dep-badge" id="dep-badge-rec">0</span>
-    </button>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 0;gap:12px">
+    <div class="dep-tabs" style="border-bottom:none;padding:0;flex:1">
+      <button class="dep-tab activo" id="dep-tab-pedidos">
+        <i data-lucide="clipboard-list"></i>
+        Mis pedidos <span class="dep-badge" id="dep-badge-ped">0</span>
+      </button>
+      <button class="dep-tab rec" id="dep-tab-rechazados">
+        <i data-lucide="x-circle"></i>
+        Rechazados <span class="dep-badge" id="dep-badge-rec">0</span>
+      </button>
+    </div>
+    <select class="dep-search" id="dep-filtro-mes" style="margin-bottom:0;padding:8px 12px;font-weight:700;color:#0b1b35;border-color:#0b1b35;flex:0 0 auto">
+      <option value="">Todos los meses</option>
+    </select>
   </div>
+  <div style="border-bottom:2px solid #e4eaf5;margin:0 16px"></div>
 
   <!-- PEDIDOS INTERNOS -->
   <div class="dep-panel activo" id="dep-panel-pedidos">
@@ -118,14 +130,20 @@ function getHTML() { return `
         <i data-lucide="refresh-cw"></i> Actualizar
       </button>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-      <input type="search" class="dep-search" id="dep-buscar-ped" placeholder="🔍 Buscar por ID, RI, detalle..." style="margin-bottom:0;flex:1;min-width:160px">
-      <select class="dep-search" id="dep-filtro-estado" style="margin-bottom:0;flex:0 0 auto;width:auto;padding:10px 10px">
+    <div style="display:grid;grid-template-columns:1fr repeat(3,auto);gap:8px;margin-bottom:14px;align-items:center">
+      <input type="search" class="dep-search" id="dep-buscar-ped" placeholder="🔍 Buscar por ID, RI, detalle..." style="margin-bottom:0">
+      <select class="dep-search" id="dep-filtro-estado" style="margin-bottom:0;padding:10px 10px;white-space:nowrap">
         <option value="">Todos los estados</option>
         <option value="Pendiente">Pendiente</option>
         <option value="Iniciado">Iniciado</option>
         <option value="aprobado">Aprobado</option>
         <option value="pase a fisico">Pase a Físico</option>
+      </select>
+      <select class="dep-search" id="dep-filtro-seccion" style="margin-bottom:0;padding:10px 10px;max-width:200px">
+        <option value="">Todas las secciones</option>
+      </select>
+      <select class="dep-search" id="dep-filtro-letra" style="margin-bottom:0;padding:10px 10px">
+        <option value="">Todas las letras RI</option>
       </select>
     </div>
     <div class="dep-cards" id="dep-cards-ped">
@@ -158,6 +176,9 @@ function bindEventos(c) {
   c.querySelector('#dep-refresh').addEventListener('click', () => cargar(c, true));
   c.querySelector('#dep-buscar-ped').addEventListener('input', () => renderPedidos(c));
   c.querySelector('#dep-filtro-estado').addEventListener('change', () => renderPedidos(c));
+  c.querySelector('#dep-filtro-seccion').addEventListener('change', () => renderPedidos(c));
+  c.querySelector('#dep-filtro-letra').addEventListener('change', () => renderPedidos(c));
+  c.querySelector('#dep-filtro-mes').addEventListener('change', () => { renderPedidos(c); renderRechazados(c); });
   c.querySelector('#dep-buscar-rec').addEventListener('input', () => renderRechazados(c));
 }
 
@@ -168,15 +189,41 @@ function switchTab(tab, c) {
   });
 }
 
+const CACHE_KEY = 'dep-cache';
+const CACHE_TTL = 60 * 1000; // 60 segundos
+
 // ── CARGA ─────────────────────────────────────────────────────────────────────
 async function cargar(c, forzar = false) {
+  // Mostrar datos cacheados inmediatamente si existen y no es refresh forzado
+  if (!forzar) {
+    try {
+      const raw = sessionStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const { ts, datos } = JSON.parse(raw);
+        if (Date.now() - ts < CACHE_TTL) {
+          pedidosCache    = datos.pedidos    || [];
+          rechazadosCache = datos.rechazados || [];
+          c.querySelector('#dep-badge-ped').textContent = pedidosCache.length;
+          c.querySelector('#dep-badge-rec').textContent = rechazadosCache.length;
+          poblarFiltros(c);
+          renderPedidos(c);
+          renderRechazados(c);
+          if (window.lucide) lucide.createIcons();
+          return; // datos frescos, no hace falta ir a GAS
+        }
+      }
+    } catch(_) {}
+  }
+
   try {
     const datos = await apiFetch('getDeposito');
     if (datos.error) throw new Error(datos.error);
     pedidosCache    = datos.pedidos    || [];
     rechazadosCache = datos.rechazados || [];
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), datos }));
     c.querySelector('#dep-badge-ped').textContent = pedidosCache.length;
     c.querySelector('#dep-badge-rec').textContent = rechazadosCache.length;
+    poblarFiltros(c);
     renderPedidos(c);
     renderRechazados(c);
     if (forzar) toast('✅ Actualizado', 'ok');
@@ -262,15 +309,63 @@ function primeraLetraRI(ri) {
   return match ? match[0].toUpperCase() : s.charAt(0).toUpperCase();
 }
 
+// ── MES ACTUAL ────────────────────────────────────────────────────────────────
+function mesActual() {
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const now = new Date();
+  return meses[now.getMonth()] + ' ' + now.getFullYear();
+}
+
+// ── POBLAR FILTROS DINÁMICOS ──────────────────────────────────────────────────
+function poblarFiltros(c) {
+  const secciones = [...new Set(pedidosCache.map(p => p.oficina || '').filter(Boolean))].sort();
+  const letras    = [...new Set(pedidosCache.map(p => primeraLetraRI(p.ri)).filter(v => v !== 'Sin RI'))].sort();
+
+  // Meses: unión de pedidos y rechazados, ordenados de más nuevo a más viejo
+  const todosMeses = [
+    ...pedidosCache.map(p => mesDesFecha(p.fecha)),
+    ...rechazadosCache.map(p => mesDesFecha(p.fecha))
+  ];
+  const meses = [...new Set(todosMeses.filter(m => m && m !== 'Sin fecha'))];
+  meses.sort((a, b) => {
+    const parse = s => { const p = s.split(' '); const ms = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']; return (parseInt(p[1])||0)*100+(ms.indexOf(p[0])+1); };
+    return parse(b) - parse(a);
+  });
+
+  const selMes = c.querySelector('#dep-filtro-mes');
+  const actual = mesActual();
+  selMes.innerHTML = '<option value="">Todos los meses</option>' +
+    meses.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+  selMes.value = meses.includes(actual) ? actual : (meses[0] || '');
+
+  const selSec = c.querySelector('#dep-filtro-seccion');
+  const valSec = selSec.value;
+  selSec.innerHTML = '<option value="">Todas las secciones</option>' +
+    secciones.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  if (valSec) selSec.value = valSec;
+
+  const selLetra = c.querySelector('#dep-filtro-letra');
+  const valLetra = selLetra.value;
+  selLetra.innerHTML = '<option value="">Todas las letras RI</option>' +
+    letras.map(l => `<option value="${esc(l)}">RI: ${esc(l)}</option>`).join('');
+  if (valLetra) selLetra.value = valLetra;
+}
+
 // ── RENDER PEDIDOS ────────────────────────────────────────────────────────────
 function renderPedidos(c) {
-  const q       = (c.querySelector('#dep-buscar-ped').value || '').toLowerCase();
-  const filtroE = c.querySelector('#dep-filtro-estado').value;
+  const q        = (c.querySelector('#dep-buscar-ped').value || '').toLowerCase();
+  const filtroE  = c.querySelector('#dep-filtro-estado').value;
+  const filtroS  = c.querySelector('#dep-filtro-seccion').value;
+  const filtroL  = c.querySelector('#dep-filtro-letra').value;
+  const filtroM  = c.querySelector('#dep-filtro-mes').value;
   const lista = pedidosCache.filter(p => {
     const estadoEfectivo = p.estado_flujo || 'Pendiente';
     const okE = !filtroE || estadoEfectivo === filtroE;
+    const okS = !filtroS || (p.oficina || '') === filtroS;
+    const okL = !filtroL || primeraLetraRI(p.ri) === filtroL;
+    const okM = !filtroM || mesDesFecha(p.fecha) === filtroM;
     const okQ = !q || `${p.id} ${p.oficina} ${p.detalle} ${p.ri} ${p.memo_vale}`.toLowerCase().includes(q);
-    return esAnioActual(p.id) && okE && okQ;
+    return esAnioActual(p.id) && okE && okS && okL && okM && okQ;
   });
   const cont = c.querySelector('#dep-cards-ped');
   if (!lista.length) { cont.innerHTML = '<div class="dep-empty">Sin pedidos de este año</div>'; return; }
@@ -330,8 +425,8 @@ function cardPedido(p) {
         <div class="dep-field"><div class="dep-label">Orden de Compra</div><div class="dep-val">${esc(p.oc||'—')}</div></div>
         <div class="dep-field full"><div class="dep-label">Memo / Vale</div>${linkOTexto(p.memo_vale, 'Vale')}</div>
         <div class="dep-field full"><div class="dep-label">Presupuesto</div>${linkOTexto(p.presupuesto, 'Presupuesto')}</div>
-        <div class="dep-field full"><div class="dep-label">Detalle del pedido</div><div class="dep-val">${esc(p.detalle||'—')}</div></div>
-        ${p.observaciones ? `<div class="dep-field full"><div class="dep-label">Observaciones</div><div class="dep-val">${esc(p.observaciones)}</div></div>` : ''}
+        <div class="dep-field full"><div class="dep-label">Detalle del pedido</div><div class="dep-val dep-val-clamp" title="${esc(p.detalle||'')}">${esc(p.detalle||'—')}</div></div>
+        ${p.observaciones ? `<div class="dep-field full"><div class="dep-label">Observaciones</div><div class="dep-val dep-val-clamp" title="${esc(p.observaciones)}">${esc(p.observaciones)}</div></div>` : ''}
       </div>
     </div>`;
 }
@@ -339,10 +434,14 @@ function cardPedido(p) {
 // ── RENDER RECHAZADOS ─────────────────────────────────────────────────────────
 function renderRechazados(c) {
   const q = (c.querySelector('#dep-buscar-rec').value || '').toLowerCase();
-  const lista = rechazadosCache.filter(p =>
-    esAnioActual(p.id) &&
-    `${p.id} ${p.oficina} ${p.detalle} ${p.ri}`.toLowerCase().includes(q)
-  );
+  const filtroM = c.querySelector('#dep-filtro-mes').value;
+  const lista = rechazadosCache
+    .filter(p => {
+      const okM = !filtroM || mesDesFecha(p.fecha) === filtroM;
+      const okQ = `${p.id} ${p.oficina} ${p.detalle} ${p.ri}`.toLowerCase().includes(q);
+      return esAnioActual(p.id) && okM && okQ;
+    })
+    .sort((a, b) => fechaOrd(b.fecha).localeCompare(fechaOrd(a.fecha)));
   const cont = c.querySelector('#dep-cards-rec');
   if (!lista.length) { cont.innerHTML = '<div class="dep-empty">Sin rechazados de este año</div>'; return; }
 

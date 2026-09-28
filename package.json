@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "playwright": "^1.61.1"
+  },
+  "dependencies": {
+    "googleapis": "^181.0.0"
   }
 }

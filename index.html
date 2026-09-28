@@ -196,6 +196,23 @@
     #panel-flota { padding: 0; }
     #panel-flota iframe { width: 100%; height: calc(100vh - 62px - 70px); border: none; display: block; }
 
+    @media (min-width: 768px) {
+      #panel-flota.activo {
+        background: #e8edf5;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 24px;
+        min-height: calc(100vh - 62px - 70px);
+      }
+      #panel-flota.activo iframe {
+        width: 420px;
+        height: min(820px, calc(100vh - 62px - 70px - 48px));
+        border-radius: 24px;
+        box-shadow: 0 12px 40px rgba(11,27,53,.25);
+      }
+    }
+
     @keyframes spin { to { transform: rotate(360deg); } }
 
     @media (min-width: 600px) {
@@ -349,7 +366,7 @@
     </button>
   </nav>
 
-  <!-- Bottom nav área Depósito -->
+  <!-- Bottom nav área Depósito (admin) -->
   <nav class="bottom-nav" id="nav-dep" style="display:none">
     <button class="bottom-btn activo" id="nav-dep-deposito">
       <i data-lucide="package"></i>
@@ -362,6 +379,22 @@
     <button class="bottom-btn" id="nav-dep-talleres">
       <i data-lucide="wrench"></i>
       Talleres
+    </button>
+  </nav>
+
+  <!-- Bottom nav rol Depósito (usuario depósito: Depósito + Flota + Lubricentro) -->
+  <nav class="bottom-nav" id="nav-rol-dep" style="display:none">
+    <button class="bottom-btn activo" id="nav-rd-deposito">
+      <i data-lucide="package"></i>
+      Depósito
+    </button>
+    <button class="bottom-btn" id="nav-rd-flota">
+      <i data-lucide="car"></i>
+      Flota
+    </button>
+    <button class="bottom-btn" id="nav-rd-lubricentro">
+      <i data-lucide="droplets"></i>
+      Lubricentro
     </button>
   </nav>
 
@@ -390,7 +423,18 @@
   let flotaSolCargada    = false;
   let talleresCargado    = false;
   let flotaDepCargada    = false;
+  let flotaRdCargada     = false;
   let lubricentroCargado = false;
+
+  const ROL = new URLSearchParams(location.search).get('rol') || sessionStorage.getItem('rol');
+  if (ROL) sessionStorage.setItem('rol', ROL);
+
+  function ocultarNavs() {
+    ['nav-sol','nav-dep','nav-rol-dep'].forEach(id => {
+      document.getElementById(id).style.display = 'none';
+    });
+    document.getElementById('tabs-solicitudes').classList.add('oculto');
+  }
 
   function activarPanel(panelId) {
     document.querySelectorAll('.content').forEach(p => p.classList.remove('activo'));
@@ -408,62 +452,97 @@
     document.getElementById(btnId).classList.add('activo');
   }
 
+  function activarBtnRd(btnId) {
+    document.querySelectorAll('#nav-rol-dep .bottom-btn').forEach(b => b.classList.remove('activo'));
+    document.getElementById(btnId).classList.add('activo');
+  }
+
+  // ── Navegar dentro del rol depósito (sin pantalla de inicio, nav propio) ──
+  function irSeccionRd(seccion) {
+    sessionStorage.setItem('seccion-rd', seccion);
+    ocultarNavs();
+    document.getElementById('btn-basurero').style.display = 'none';
+    document.getElementById('nav-rol-dep').style.display = 'flex';
+
+    if (seccion === 'deposito') {
+      document.getElementById('nav-titulo').textContent = 'Depósito';
+      document.getElementById('nav-subtitulo').textContent = 'PIB · Flota';
+      activarPanel('panel-deposito');
+      activarBtnRd('nav-rd-deposito');
+      if (!depositoCargado) { depositoCargado = true; montarDeposito(document.getElementById('panel-deposito')); }
+    } else if (seccion === 'flota') {
+      document.getElementById('nav-titulo').textContent = 'Flota';
+      document.getElementById('nav-subtitulo').textContent = 'Vehículos municipales';
+      activarPanel('panel-flota');
+      activarBtnRd('nav-rd-flota');
+      if (!flotaRdCargada) {
+        flotaRdCargada = true;
+        document.getElementById('panel-flota').innerHTML =
+          '<iframe src="https://marcelofurlong3.github.io/flota-municipal/" allowfullscreen></iframe>';
+      }
+    } else if (seccion === 'lubricentro') {
+      document.getElementById('nav-titulo').textContent = 'Lubricentro';
+      document.getElementById('nav-subtitulo').textContent = 'Aceites · Service';
+      activarPanel('panel-lubricentro');
+      activarBtnRd('nav-rd-lubricentro');
+      if (!lubricentroCargado) { lubricentroCargado = true; montarLubricentro(document.getElementById('panel-lubricentro')); }
+    }
+    if (window.lucide) lucide.createIcons();
+  }
+
   window.entrarArea = function(area) {
     sessionStorage.setItem('area', area);
     document.getElementById('pantalla-inicio').style.display = 'none';
     document.getElementById('pantalla-app').classList.add('visible');
 
+    ocultarNavs();
     document.getElementById('btn-basurero').style.display = '';
+
     if (area === 'solicitudes') {
       document.getElementById('nav-titulo').textContent = 'Solicitudes';
       document.getElementById('nav-subtitulo').textContent = 'BHI · PIB · Flota';
       document.getElementById('tabs-solicitudes').classList.remove('oculto');
       document.getElementById('nav-sol').style.display = 'flex';
-      document.getElementById('nav-dep').style.display = 'none';
       activarPanel('panel-bhi');
       activarBtnSol('nav-sol-solicitudes');
     } else if (area === 'lubricentro') {
       document.getElementById('nav-titulo').textContent = 'Lubricentro';
       document.getElementById('nav-subtitulo').textContent = 'Aceites · Service';
-      document.getElementById('tabs-solicitudes').classList.add('oculto');
-      document.getElementById('nav-sol').style.display = 'none';
-      document.getElementById('nav-dep').style.display = 'none';
       document.getElementById('btn-basurero').style.display = 'none';
       activarPanel('panel-lubricentro');
-      if (!lubricentroCargado) {
-        lubricentroCargado = true;
-        montarLubricentro(document.getElementById('panel-lubricentro'));
-      }
+      if (!lubricentroCargado) { lubricentroCargado = true; montarLubricentro(document.getElementById('panel-lubricentro')); }
     } else {
       document.getElementById('nav-titulo').textContent = 'Depósito';
       document.getElementById('nav-subtitulo').textContent = 'PIB · Flota';
-      document.getElementById('tabs-solicitudes').classList.add('oculto');
-      document.getElementById('nav-sol').style.display = 'none';
       document.getElementById('nav-dep').style.display = 'flex';
       activarPanel('panel-deposito');
       activarBtnDep('nav-dep-deposito');
-      if (!depositoCargado) {
-        depositoCargado = true;
-        montarDeposito(document.getElementById('panel-deposito'));
-      }
+      if (!depositoCargado) { depositoCargado = true; montarDeposito(document.getElementById('panel-deposito')); }
     }
     if (window.lucide) lucide.createIcons();
   };
 
   window.volverInicio = function() {
+    // Rol depósito: el logo MU no hace nada (ya están en su área)
+    if (ROL === 'deposito') return;
     sessionStorage.removeItem('area');
     document.getElementById('pantalla-inicio').style.display = 'flex';
     document.getElementById('pantalla-app').classList.remove('visible');
   };
 
   document.addEventListener('DOMContentLoaded', () => {
-    // ── Área Solicitudes: nav ──
+
+    // ── Nav rol Depósito ──
+    document.getElementById('nav-rd-deposito').addEventListener('click', () => irSeccionRd('deposito'));
+    document.getElementById('nav-rd-flota').addEventListener('click',    () => irSeccionRd('flota'));
+    document.getElementById('nav-rd-lubricentro').addEventListener('click', () => irSeccionRd('lubricentro'));
+
+    // ── Nav Solicitudes ──
     document.getElementById('nav-sol-solicitudes').addEventListener('click', () => {
       activarPanel('panel-bhi');
       activarBtnSol('nav-sol-solicitudes');
       document.getElementById('tabs-solicitudes').classList.remove('oculto');
     });
-
     document.getElementById('nav-sol-flota').addEventListener('click', () => {
       activarPanel('panel-flota');
       activarBtnSol('nav-sol-flota');
@@ -474,36 +553,24 @@
           '<iframe src="https://marcelofurlong3.github.io/flota-municipal/" allowfullscreen></iframe>';
       }
     });
-
     document.getElementById('nav-sol-talleres').addEventListener('click', () => {
       activarPanel('panel-talleres');
       activarBtnSol('nav-sol-talleres');
       document.getElementById('tabs-solicitudes').classList.add('oculto');
-      if (!talleresCargado) {
-        talleresCargado = true;
-        montarTalleres(document.getElementById('panel-talleres'));
-      }
+      if (!talleresCargado) { talleresCargado = true; montarTalleres(document.getElementById('panel-talleres')); }
     });
 
-    // ── Área Depósito: nav ──
+    // ── Nav Depósito (admin) ──
     document.getElementById('nav-dep-talleres')?.addEventListener('click', () => {
       activarPanel('panel-talleres');
       activarBtnDep('nav-dep-talleres');
-      if (!talleresCargado) {
-        talleresCargado = true;
-        montarTalleres(document.getElementById('panel-talleres'));
-      }
+      if (!talleresCargado) { talleresCargado = true; montarTalleres(document.getElementById('panel-talleres')); }
     });
-
     document.getElementById('nav-dep-deposito').addEventListener('click', () => {
       activarPanel('panel-deposito');
       activarBtnDep('nav-dep-deposito');
-      if (!depositoCargado) {
-        depositoCargado = true;
-        montarDeposito(document.getElementById('panel-deposito'));
-      }
+      if (!depositoCargado) { depositoCargado = true; montarDeposito(document.getElementById('panel-deposito')); }
     });
-
     document.getElementById('nav-dep-flota').addEventListener('click', () => {
       activarPanel('panel-flota');
       activarBtnDep('nav-dep-flota');
@@ -514,9 +581,20 @@
       }
     });
 
-    // Restaurar área si ya eligió antes
-    const area = sessionStorage.getItem('area');
-    if (area) entrarArea(area);
+    // ── Arranque según rol ──
+    if (ROL === 'deposito') {
+      // Ocultar card Solicitudes en pantalla de inicio
+      document.querySelector('.area-card.sol').style.display = 'none';
+      // Entrar directo sin pasar por la pantalla de inicio
+      document.getElementById('pantalla-inicio').style.display = 'none';
+      document.getElementById('pantalla-app').classList.add('visible');
+      // Restaurar sección previa o ir a Depósito por defecto
+      const seccion = sessionStorage.getItem('seccion-rd') || 'deposito';
+      irSeccionRd(seccion);
+    } else {
+      const area = sessionStorage.getItem('area');
+      if (area) entrarArea(area);
+    }
   });
 </script>
 <script>

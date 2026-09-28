@@ -47,19 +47,16 @@ tenerlo disponible en la app antes de hacer una compra, y nunca comprar el kit e
 ## Fase 2 — App: sección en Lubricentro [ ]
 **Objetivo:** ver el estado de kits en la app, filtrar por estado, buscar por modelo.
 
-- [ ] 2.1 Tab nuevo "Kits" en el módulo Lubricentro
+- [x] 2.1 Tab nuevo "Kits" en el módulo Lubricentro
   - Lista de todos los modelos con su estado: ✅ completo / ⚠️ sin verificar / ❌ sin datos
   - Buscador por nombre de modelo
   - Filtro por serie (A / C / T / V / etc.)
 
-- [ ] 2.2 Vista detalle por modelo
-  - Muestra: filtro aceite, aire, combustible, habitáculo, hidráulico
-  - Badge de fuente: "Vale físico ✅" / "Catálogo online ⚠️" / "Sin datos ❌"
-  - Botón "Marcar como verificado" (solo admin)
+- [x] 2.2 Vista detalle por modelo — modal con fotos de vales (click en foto para zoom)
 
-- [ ] 2.3 Desde la vista de un vehículo (búsqueda por RI)
-  - Si el modelo tiene kit → mostrar el kit directo
-  - Si no tiene → mostrar "Sin kit registrado" con botón para agregar
+- [x] 2.3 Desde la vista de un vehículo (búsqueda por RI)
+  - Badge "Kit identificado" / "Sin kit" en cada modelo de la app de flota
+  - Al expandir el modelo → muestra campos de filtro arriba de los vehículos
 
 ---
 
@@ -117,4 +114,15 @@ tenerlo disponible en la app antes de hacer una compra, y nunca comprar el kit e
 - Supabase NK/Flota: sugkmcdngvtvwzglodkh.supabase.co
 
 ## Próximo paso
-→ Fase 2.1: tab "Kits" en Lubricentro
+→ Revisión manual de los 45 vales verificados con http://localhost:9292 (revisar_kits.py)
+→ Después: Fase 3 — búsqueda automática en catálogos para los 220 sin kit
+
+## Notas de análisis (2026-08-06)
+- OCR automático con Claude Haiku NO funcionó — el vale tiene demasiados números (OT, materiales, correlativo) y el modelo no identifica cuál es el RI
+- Solo 2/114 fotos coincidieron — resultado no confiable
+- Revisión manual via revisar_kits.py (http://localhost:9292) es el único camino confiable
+- Scripts disponibles:
+  - C:\Users\furlo\subir_fotos_flota.py — sube HEIC identificadas a Supabase
+  - C:\Users\furlo\confirmar_dudosos.py — confirma RIs dudosos (puerto 9191)
+  - C:\Users\furlo\revisar_kits.py — revisa foto por foto los 45 verificados (puerto 9292)
+  - C:\Users\furlo\verificar_vales_vision.py — OCR con visión (no confiable para estos vales)
