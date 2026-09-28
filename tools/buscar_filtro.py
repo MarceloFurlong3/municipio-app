@@ -2,23 +2,17 @@
 # -*- coding: utf-8 -*-
 """
 buscar_filtro.py - Investigador de filtros del Municipio de Bahia Blanca
-Dado un codigo de filtro, busca en internet y cruza con la flota municipal.
+Dado un codigo de filtro, busca en internet con Playwright y cruza con la flota.
 
-Uso: python buscar_filtro.py ARS9837
+Uso: python buscar_filtro.py AA1705
+     python buscar_filtro.py ARS9837
      python buscar_filtro.py P551010
 """
 
-import os, sys, re, json, requests
-from urllib.parse import quote_plus
+import os, sys, re, time, requests
 from difflib import SequenceMatcher
+from urllib.parse import quote_plus
 
-try:
-    import anthropic
-    _HAS_ANTHROPIC = True
-except ImportError:
-    _HAS_ANTHROPIC = False
-
-# Forzar UTF-8 en la salida
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # ── Config Supabase ────────────────────────────────────────────────────────────
@@ -31,81 +25,200 @@ HEADERS_SUPA = {"apikey": SUPA_KEY, "Authorization": f"Bearer {SUPA_KEY}"}
 MARCAS_FLOTA = [
     "CATERPILLAR", "JOHN DEERE", "NEW HOLLAND", "CASE", "VOLVO", "SCANIA",
     "MERCEDES", "IVECO", "VOLKSWAGEN", "FORD", "CHEVROLET", "FIAT", "NISSAN",
-    "TOYOTA", "RENAULT", "PEUGEOT", "HYUNDAI", "MITSUBISHI",
+    "TOYOTA", "RENAULT", "PEUGEOT", "HYUNDAI", "MITSUBISHI", "AGRALE", "DEUTZ",
     "LONKING", "MICHIGAN", "XCMG", "ZHENGLOADER", "MAN", "ISUZU", "HINO",
     "KOMATSU", "HIDROMEK", "MANITOU", "YANMAR",
 ]
 
-BROWSER_HEADERS = {
-    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                   "AppleWebKit/537.36 (KHTML, like Gecko) "
-                   "Chrome/120.0.0.0 Safari/537.36")
-}
 
+# ── 1. Playwright — scraping real ──────────────────────────────────────────────
 
-# ── 1. Busqueda web ────────────────────────────────────────────────────────────
-
-def consultar_claude(codigo):
+def scrape_con_playwright(codigo):
     """
-    Usa Claude Haiku para identificar el vehiculo de un codigo de filtro.
-    Requiere ANTHROPIC_API_KEY en el entorno.
+    Abre un navegador real (invisible) y busca el filtro en los catálogos argentinos.
+    Retorna lista de textos con info del vehiculo.
     """
-    if not _HAS_ANTHROPIC:
-        return None
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        return None
-    try:
-        client = anthropic.Anthropic(api_key=api_key)
-        msg = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=400,
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"Soy mecanico de una flota municipal en Argentina. "
-                    f"Tengo un filtro con codigo '{codigo}'. "
-                    f"Necesito saber: para que marca y modelo de vehiculo es este filtro, "
-                    f"de que tipo es (aceite/aire/combustible/trampa), "
-                    f"y si conoces codigos equivalentes de otras marcas. "
-                    f"Respondeme solo con esa informacion, sin explicaciones largas. "
-                    f"Formato: VEHICULO: ..., TIPO: ..., EQUIVALENTES: ..."
+    from playwright.sync_api import sync_playwright
+
+    codigo_lower = codigo.lower().replace(" ", "").replace("-", "")
+    urls = [
+        # Monza — fabricante del filtro AA, MR, etc.
+        f"https://monzafiltros.com.ar/?s={quote_plus(codigo)}",
+        # disfil — distribuidor argentino con catalogo completo
+        f"https://disfil.com.ar/?s={quote_plus(codigo)}",
+        # especialistasenfiltros — busca por codigo
+        f"https://www.especialistasenfiltros.com.ar/?s={quote_plus(codigo)}",
+        # sf-filter — cruce de referencias
+        f"https://www.sf-filter.com/en/cross-reference-list?searchValue={quote_plus(codigo)}",
+        # Google via Playwright (renderiza JS)
+        f"https://www.google.com/search?q={quote_plus(f'filtro {codigo} aplicacion camion argentina')}&hl=es",
+    ]
+
+    textos = []
+    cod_n = codigo.upper().replace("-", "").replace(" ", "")
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+
+        for url in urls:
+            page = None
+            try:
+                context = browser.new_context(
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                               "AppleWebKit/537.36 (KHTML, like Gecko) "
+                               "Chrome/120.0.0.0 Safari/537.36",
+                    locale="es-AR"
                 )
-            }]
-        )
-        return msg.content[0].text
+                page = context.new_page()
+                page.goto(url, timeout=18000, wait_until="domcontentloaded")
+                time.sleep(1.5)
+                texto = page.inner_text("body")
+                tiene_codigo = cod_n in texto.upper().replace("-", "").replace(" ", "")
+                tiene_marca  = any(m in texto.upper() for m in MARCAS_FLOTA)
+                if tiene_codigo or tiene_marca:
+                    textos.append(texto[:4000])
+                    print(f"  [pw]   OK: {url[:65]}")
+                else:
+                    print(f"  [pw]   sin datos utiles: {url[:55]}")
+            except Exception as e:
+                msg = str(e).split("\n")[0][:80]
+                print(f"  [pw]   error: {msg}")
+            finally:
+                if page:
+                    try: page.close()
+                    except: pass
+                try: context.close()
+                except: pass
+
+        browser.close()
+
+    return textos
+
+
+def buscar_google_simple(codigo):
+    """
+    Busca en Google News/Search como texto plano (sin JS).
+    Funciona a veces como complemento.
+    """
+    url = (f"https://www.google.com/search?q="
+           f"{quote_plus(f'filtro {codigo} aplicacion vehiculo camion argentina')}"
+           f"&num=5&hl=es")
+    try:
+        r = requests.get(url, headers={
+            "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+        }, timeout=10)
+        return [r.text[:3000]] if len(r.text) > 500 else []
+    except:
+        return []
+
+
+MONZA_PDF_URL = ("https://www.autopartcomodoro.com.ar/wp-content/uploads"
+                 "/2014/07/MONZA-septiembre-14.pdf")
+_monza_pdf_cache = None
+
+def buscar_en_monza_pdf(codigo):
+    """
+    Lee el catalogo Monza 2014 (PDF) y busca el codigo.
+    Funciona para prefijos AA y MR. Cachea el PDF en memoria.
+    Retorna la linea exacta del catalogo o None.
+    """
+    global _monza_pdf_cache
+    try:
+        import pdfplumber, io
+        if _monza_pdf_cache is None:
+            r = requests.get(MONZA_PDF_URL,
+                             headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
+            _monza_pdf_cache = r.content
+
+        cod_n = codigo.upper().replace("-", "").replace(" ", "")
+        with pdfplumber.open(io.BytesIO(_monza_pdf_cache)) as pdf:
+            for page in pdf.pages:
+                texto = page.extract_text() or ""
+                if cod_n in texto.upper().replace("-", "").replace(" ", ""):
+                    idx = texto.upper().replace("-", "").replace(" ", "").find(cod_n)
+                    # Reconstruir posicion aproximada en texto original
+                    lineas = texto.split("\n")
+                    for linea in lineas:
+                        if cod_n in linea.upper().replace("-", "").replace(" ", ""):
+                            return linea.strip()
+        return None
     except Exception as e:
         return None
 
 
-def extraer_texto_claude(respuesta):
-    """Convierte la respuesta de Claude en lista de textos para extraer marcas."""
-    if not respuesta:
-        return []
-    return [respuesta]
-
-
 def investigar_web(codigo):
-    """Investiga el codigo via Claude API (conocimiento de catalogo)."""
-    respuesta = consultar_claude(codigo)
-    if respuesta:
-        return [respuesta]
-    # Fallback: texto vacio, el scoring dependera solo de la base
-    return []
+    """
+    Estrategia por tipo de filtro:
+    - AA / MR (Monza) → PDF del catalogo Monza
+    - Otros → Playwright en disfil + sf-filter
+    """
+    prefijo = codigo[:2].upper().replace("-", "")
+    textos = []
+
+    if prefijo in ("AA", "MR"):
+        print(f"  [pdf]  Buscando en catalogo Monza...")
+        linea = buscar_en_monza_pdf(codigo)
+        if linea:
+            print(f"  [pdf]  Encontrado: {linea[:80]}")
+            textos.append(linea)
+        else:
+            print(f"  [pdf]  No encontrado en catalogo Monza")
+
+    if not textos:
+        textos = scrape_con_playwright(codigo)
+
+    return textos
 
 
 # ── 2. Extraccion de marcas ────────────────────────────────────────────────────
 
 def extraer_menciones(textos):
+    """
+    Extrae menciones de marcas del texto. Evita falsos positivos:
+    - MAN solo si va seguido de espacio+numero o solo (no "Management", "Manual")
+    - CASE solo si no es "because", "in case", etc.
+    """
     menciones = {}
+    # Marcas que necesitan validacion extra (estan contenidas en palabras comunes)
+    MARCAS_ESTRICTAS = {"MAN", "CASE", "FORD"}
+
     for texto in textos:
         texto_up = texto.upper()
         for marca in MARCAS_FLOTA:
-            if marca in texto_up:
-                idx = texto_up.find(marca)
-                contexto = texto[idx:idx + 80].strip()
-                menciones.setdefault(marca, []).append(contexto)
+            if marca not in texto_up:
+                continue
+            # Para marcas estrictas, verificar que sea una palabra entera
+            if marca in MARCAS_ESTRICTAS:
+                # Buscar como palabra completa con regex
+                patron = r'(?<![A-Z])' + marca + r'(?![A-Z])'
+                if not re.search(patron, texto_up):
+                    continue
+            idx = texto_up.find(marca)
+            contexto = texto[idx:idx + 100].strip()
+            menciones.setdefault(marca, []).append(contexto)
     return menciones
+
+
+def extraer_modelos_prix(textos):
+    """
+    prix.com.ar lista los vehiculos compatibles en su pagina de producto.
+    Busca el patron 'APLICACIONES:' o listas de modelos.
+    """
+    modelos = []
+    for texto in textos:
+        # Buscar seccion de aplicaciones
+        idx = texto.upper().find("APLICACION")
+        if idx >= 0:
+            bloque = texto[idx:idx + 800]
+            modelos.append(bloque)
+        # Buscar patron de modelo (marca + numero)
+        patrones = re.findall(
+            r'((?:MERCEDES|FORD|IVECO|VOLKSWAGEN|AGRALE|DEUTZ|SCANIA|VOLVO|'
+            r'CATERPILLAR|JOHN\s?DEERE|NEW\s?HOLLAND)[^,\n]{3,50})',
+            texto, re.IGNORECASE
+        )
+        modelos.extend(patrones[:10])
+    return modelos
 
 
 # ── 3. Carga de flota ─────────────────────────────────────────────────────────
@@ -138,20 +251,20 @@ def cargar_alternativos():
 
 # ── 4. Scoring ────────────────────────────────────────────────────────────────
 
-def similitud(a, b):
-    return SequenceMatcher(None, a.upper(), b.upper()).ratio()
-
-
 def norm(s):
     return s.upper().replace("-", "").replace(" ", "")
 
 
-def puntuar(vehiculo, menciones, codigo):
+def similitud(a, b):
+    return SequenceMatcher(None, a.upper(), b.upper()).ratio()
+
+
+def puntuar(vehiculo, menciones, modelos_prix, codigo):
     modelo_up = vehiculo["modelo"].upper()
     score = 0.0
     razon = []
 
-    # A) Match exacto en campos de filtro
+    # A) Match exacto en campos de filtro de la base
     campos = {
         "filtro_aceite": vehiculo.get("filtro_aceite"),
         "filtro_aire": vehiculo.get("filtro_aire"),
@@ -162,31 +275,37 @@ def puntuar(vehiculo, menciones, codigo):
     }
     cod_n = norm(codigo)
     for campo, valor in campos.items():
-        if valor:
-            val_n = norm(valor)
-            if cod_n == val_n:
-                return 1.0, [f"match exacto en {campo}: {valor}"]
-            elif cod_n in val_n or val_n in cod_n:
-                score = max(score, 0.85)
-                razon.append(f"match parcial en {campo}: {valor}")
+        if valor and norm(valor) == cod_n:
+            return 1.0, [f"match exacto en {campo}: {valor}"]
+        elif valor and (cod_n in norm(valor) or norm(valor) in cod_n):
+            score = max(score, 0.85)
+            razon.append(f"match parcial en {campo}: {valor}")
 
-    # B) Marca del vehiculo aparece en resultados web con contexto similar
+    # B) El modelo aparece textualmente en lo que scrapeo de prix
+    for bloque in modelos_prix:
+        if modelo_up[:15] in bloque.upper():
+            score = max(score, 0.88)
+            razon.append(f"modelo encontrado en catalogo: '{bloque[:60]}'")
+        else:
+            sim = similitud(modelo_up, bloque)
+            if sim > 0.6:
+                score = max(score, sim * 0.75)
+                razon.append(f"similitud {int(sim*100)}% con catalogo: '{bloque[:50]}'")
+
+    # C) Marca del vehiculo en texto scrapeado
     for marca in MARCAS_FLOTA:
         if marca in modelo_up and marca in menciones:
             for contexto in menciones[marca]:
                 sim = similitud(modelo_up, contexto)
-                if sim > 0.55:
-                    bonus = sim * 0.7
-                elif sim > 0.3:
-                    bonus = sim * 0.45
+                if sim > 0.5:
+                    bonus = sim * 0.65
+                elif sim > 0.25:
+                    bonus = 0.3
                 else:
-                    bonus = 0.2  # marca presente pero sin similitud de modelo
+                    bonus = 0.2
                 if bonus > score:
                     score = bonus
-                    razon.append(
-                        f"marca {marca} en web, similitud modelo {int(sim*100)}%: "
-                        f"'{contexto[:50]}'"
-                    )
+                    razon.append(f"marca {marca} en web, sim {int(sim*100)}%: '{contexto[:50]}'")
 
     return score, razon
 
@@ -194,42 +313,45 @@ def puntuar(vehiculo, menciones, codigo):
 # ── 5. Investigacion principal ─────────────────────────────────────────────────
 
 def investigar(codigo):
-    codigo = norm(codigo)
+    codigo_orig = codigo.strip().upper()
     sep = "=" * 55
     print(f"\n{sep}")
-    print(f"  INVESTIGANDO FILTRO: {codigo}")
+    print(f"  INVESTIGANDO FILTRO: {codigo_orig}")
     print(sep)
 
-    # Web
-    textos = investigar_web(codigo)
-    print(f"  [web]  {len(textos)} fragmentos obtenidos")
+    # Web con Playwright
+    print(f"  [web]  Abriendo navegador...")
+    textos = investigar_web(codigo_orig)
+    print(f"  [web]  {len(textos)} paginas con datos obtenidos")
 
-    # Menciones de marcas
+    # Extraer menciones y modelos
     menciones = extraer_menciones(textos)
+    modelos_prix = extraer_modelos_prix(textos)
     marcas = list(menciones.keys())
+
     if marcas:
         print(f"  [web]  Marcas detectadas: {', '.join(marcas)}")
-    else:
-        print(f"  [web]  Ninguna marca conocida detectada")
+    if modelos_prix:
+        print(f"  [web]  Modelos del catalogo: {modelos_prix[0][:80]}")
 
     # Flota
-    print(f"  [db]   Cargando flota desde Supabase...")
+    print(f"  [db]   Cargando flota...")
     flota = cargar_flota()
     alternativos = cargar_alternativos()
-    print(f"  [db]   {len(flota)} modelos | {len(alternativos)} codigos alternativos")
+    print(f"  [db]   {len(flota)} modelos | {len(alternativos)} alternativos")
 
     # Match directo en alternativos
-    alt_hits = [a for a in alternativos if norm(a.get("codigo", "")) == codigo]
+    alt_hits = [a for a in alternativos if norm(a.get("codigo", "")) == norm(codigo_orig)]
     if alt_hits:
         print(f"\n  ** Codigo encontrado como alternativo en la base:")
         for a in alt_hits:
             print(f"     -> {a['marca']} | tipo: {a['tipo']} | modelo: {a['modelo']}")
 
-    # Puntuar vehiculos
+    # Puntuar
     resultados = []
     for v in flota:
-        score, razon = puntuar(v, menciones, codigo)
-        if score > 0.15:
+        score, razon = puntuar(v, menciones, modelos_prix, codigo_orig)
+        if score > 0.18:
             resultados.append({
                 "modelo": v["modelo"],
                 "ris": v.get("ris") or [],
@@ -241,14 +363,14 @@ def investigar(codigo):
 
     # Resultado
     print(f"\n{'-'*55}")
-    print(f"  RESULTADO: {codigo}")
+    print(f"  RESULTADO: {codigo_orig}")
     print(f"{'-'*55}")
 
-    if not resultados:
+    if not resultados and not alt_hits:
         print("  Sin coincidencias en la flota.")
-        print("  Probable causa: vehiculo aun no cargado (72/269 modelos).")
         if marcas:
-            print(f"  Pista web: revisar vehiculos de marca {', '.join(marcas)}")
+            print(f"  Pista: revisar vehiculos de marca {', '.join(marcas)}")
+        print("  Puede ser vehiculo aun no cargado (72/269 modelos).")
     else:
         for i, r in enumerate(resultados[:6]):
             pct = int(r["score"] * 100)
@@ -263,13 +385,12 @@ def investigar(codigo):
                 print(f"       -> {r['razon'][0]}")
 
     print(f"\n{sep}\n")
+    return resultados
 
-
-# ── Entry point ────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Uso: python tools/buscar_filtro.py CODIGO")
-        print("Ej:  python tools/buscar_filtro.py ARS9837")
+        print("Ej:  python tools/buscar_filtro.py AA1705")
         sys.exit(1)
     investigar(" ".join(sys.argv[1:]))

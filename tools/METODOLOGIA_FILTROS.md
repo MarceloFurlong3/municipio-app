@@ -155,14 +155,97 @@ WHERE modelo ILIKE '%IVECO%170E22%';
 
 ## Lo que NO funciona (para no perder tiempo)
 
-- **Google scraping** — bloquea bots, devuelve pagina de "activar JavaScript"
-- **Bing scraping** — devuelve HTML pero los resultados relevantes estan en JavaScript
-- **DuckDuckGo API** — funciona para preguntas generales, no para codigos de filtro especificos
-- **DuckDuckGo HTML** — a veces funciona, a veces bloquea (inconsistente)
+- **Google scraping** — bloquea por CAPTCHA de IP cuando se repiten pedidos
+- **Bing scraping** — resultados relevantes estan en JavaScript, no en el HTML estatico
+- **DuckDuckGo API** — funciona para preguntas generales, NO para codigos de filtro especificos
+- **DuckDuckGo HTML** — inconsistente, a veces bloquea
+- **prix.com.ar** — bloquea robots.txt automatico; ademas, solo tiene filtros marca Prix, NO Monza
+- **disfil.com.ar/equivalencias** — NO tiene AA1705 ni muchos filtros Monza en su base
+- **monzafiltros.com.ar** — dominio no existe
+- **alfarodamientos, todofiltros, centraldelfiltro** — no tienen AA1705
 
-## Lo que SI funciona
+## Lo que SI funciona (en orden de velocidad)
 
-- **Supabase directo** — buscar primero siempre, es instantaneo
-- **Claude en sesion** — conoce catalogos de filtros del entrenamiento, da buenas respuestas
-- **Scraping directo a petroil.net** — funciona si se sabe la URL exacta del producto
-- **prix.com.ar** — pendiente de probar con requests (URL predecible)
+### 1. Supabase directo — SIEMPRE PRIMERO (instantaneo)
+```sql
+SELECT modelo, ris, filtro_aire FROM kits_filtros
+WHERE filtro_aire ILIKE '%CODIGO%' OR filtro_aceite ILIKE '%CODIGO%';
+
+SELECT modelo, codigo, marca FROM kits_alternativos
+WHERE codigo ILIKE '%CODIGO%';
+```
+
+### 2. Catalogo Monza PDF — FUENTE DEFINITIVA para filtros AA y MR (2-3 segundos)
+Para cualquier codigo Monza (AA-xxxx, MR-xxxx):
+```python
+import requests, pdfplumber, io
+r = requests.get('https://www.autopartcomodoro.com.ar/wp-content/uploads/2014/07/MONZA-septiembre-14.pdf')
+with pdfplumber.open(io.BytesIO(r.content)) as pdf:
+    for page in pdf.pages:
+        texto = page.extract_text() or ''
+        if 'AA1705' in texto.upper():
+            # encontrado — extraer la linea
+```
+El PDF tiene 29 paginas. Los codigos AA estan en orden numerico. AA1705 esta en pagina 20.
+Formato de cada linea: `CODIGO  APLICACION  CANTIDAD  PRECIO  DIMENSIONES  EQUIVALENTES`
+
+### 3. disfil.com.ar/equivalencias con Playwright — para otras marcas
+Funciona para codigos que disfil tiene en su base (principalmente WIX, Mann, Fleetguard):
+```python
+page.goto('https://disfil.com.ar/equivalencias', wait_until='networkidle')
+page.locator('input').first.fill('CODIGO')
+page.keyboard.press('Enter')
+time.sleep(3)
+texto = page.inner_text('body')  # contiene "Sin equivalencias" o la lista
+```
+
+### 4. sf-filter.com — para cruces de referencia entre marcas
+URL: `https://www.sf-filter.com/en/cross-reference-list?searchValue=CODIGO`
+Funciona con requests normal (sin Playwright). Util para saber el SF-Filter equivalente.
+Ejemplo: AA1705 → SL6214
+
+### 5. especialistasenfiltros.com.ar — para vehiculos Mercedes/Ford/Iveco
+URL: `https://www.especialistasenfiltros.com.ar/filtros/camiones/mercedes-benz/MODELO`
+Tiene tabla con motor/año/filtros en formato limpio. Bueno para confirmar.
+
+---
+
+## Casos resueltos (historial)
+
+### 2026-09-28 — ARS9837
+- **Pregunta:** Para que vehiculo es el filtro Tecfil ARS9837?
+- **Fuente:** petroil.net + web search
+- **Respuesta:** Iveco EuroCargo Tector 170E22H
+- **En la flota:** IVECO 170E28 NC M32 (RIs C-762 a C-767) tiene Mann C27902 (equivalente)
+- **Confianza:** 95%
+
+### 2026-09-28 — P551010
+- **Pregunta:** Para que vehiculo es el filtro Fleetguard P551010?
+- **Fuente:** kits_alternativos en Supabase
+- **Respuesta:** Caterpillar 120K — filtro trampa
+- **Confianza:** 100% — match exacto en base
+
+### 2026-09-28 — AA1705 Monza
+- **Pregunta:** Para que vehiculo es el filtro Monza AA1705?
+- **Fuente:** Catalogo Monza PDF (autopartcomodoro.com.ar) — PAGINA 20
+- **Respuesta:** PERKINS 6 - Mercedes Benz 813/913 - Chevrolet D20 - Deutz - Ford - Massey
+- **Dimensiones:** 87mm int · 165mm ext · 351mm alto
+- **Secundario:** AA1706 (va dentro del AA1705)
+- **En la flota:** Massey Ferguson varios + Ford F-100 Perkins (sin filtro_aire cargado)
+- **IMPORTANTE:** NO sirve para todos los Massey — solo los que tienen Perkins 6-cil.
+  Los MF 265/290 suelen tener Perkins 4-cil y usarian un filtro mas chico.
+  Para confirmar: medir el filtro fisico (165mm ext x 351mm alto).
+- **Confianza:** 92% en aplicacion, 60% en quales Massey de la flota
+
+---
+
+## Algoritmo optimo para investigar un filtro (post-sesion 2026-09-28)
+
+```
+1. Identificar la marca por el prefijo (AA/MR → Monza, ARS → Tecfil, P5 → Fleetguard, etc.)
+2. Buscar en kits_filtros y kits_alternativos de Supabase (instantaneo)
+3. Si es Monza (AA o MR) → leer el PDF de autopartcomodoro.com.ar con pdfplumber
+4. Si es otra marca → disfil.com.ar/equivalencias con Playwright
+5. Cruzar resultado con la flota → puntuar y rankear
+6. Si la dimension esta disponible → agregarla al resultado para confirmar fisico
+```
