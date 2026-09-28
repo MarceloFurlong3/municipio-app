@@ -96,3 +96,39 @@ Cada filtro tiene un nivel de confianza basado en cuántas fuentes confirman la 
 - Los /S son filtros secundarios que van DENTRO del primario — registrar por separado, vincular al primario
 - Donaldson sin código: fotografiar, medir diámetro y altura, buscar por dimensiones
 - Góndolas: 4 en total, todas iguales — etiquetar G1/G2/G3/G4 + estante E1/E2/E3
+
+---
+
+## MUNI-002 — Servicio autónomo de identificación de filtros
+
+**ID:** MUNI-002
+**Estado:** PENDIENTE
+**Prioridad:** Media
+**Fecha planificada:** 2026-09-29
+
+### El problema
+Hoy la identificación de un filtro desconocido requiere que Marcelo pregunte a Claude manualmente en el chat. No escala: hay cientos de filtros en el depósito y muchos sin identificar.
+
+### La solución
+Un servicio autónomo que dado un código de filtro devuelve el vehículo más probable de la flota con nivel de confianza. Puede correr desde Zanta (Telegram), desde n8n, o como script standalone.
+
+### Lo que ya existe
+- `tools/buscar_filtro.py` — script con lógica de scoring + cruce Supabase. Falta la fuente de datos web.
+- `tools/METODOLOGIA_FILTROS.md` — documento vivo de cómo investigar filtros. Se actualiza con cada sesión.
+- Buscador inverso en la app (tab Kits → buscar por código).
+
+### Bloqueadores actuales
+- Google y Bing bloquean scraping sin JavaScript
+- Anthropic API requiere key en variable de entorno (`ANTHROPIC_API_KEY`)
+- DuckDuckGo API no devuelve resultados para códigos de filtro específicos
+
+### Opciones para desbloquear (evaluar mañana)
+1. **prix.com.ar directo** — tiene URLs predecibles tipo `prix.com.ar/filtro-de-aire/CODIGO`. Probar si responde a requests sin JS.
+2. **API de Anthropic** — setear `ANTHROPIC_API_KEY` en variables de usuario de Windows. Claude conoce catálogos de filtros del entrenamiento. Costo ~$0.001 por consulta.
+3. **Zanta skill** — Zanta llama a Claude via API ya existente. No requiere nueva key, se integra al flujo actual.
+4. **Playwright headless** — navega prix.com.ar con JS activado. Más complejo pero más confiable.
+
+### Criterio de aceptación
+- Dado `ARS9837` → responde "IVECO 170E22H — 95% confianza — RIs: C-534 a C-546" en menos de 5 segundos
+- Funciona desde Telegram via Zanta o desde terminal con `python buscar_filtro.py CODIGO`
+- Se actualiza automáticamente cuando se carga un kit nuevo en Supabase
