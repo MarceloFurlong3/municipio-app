@@ -245,7 +245,10 @@ export function montarTalleres(c) {
 </div>
 
 <div id="panel-ot">
-  <button class="tall-nuevo" onclick="abrirNuevaOT()">+ Nueva Orden de Trabajo</button>
+  <div style="display:flex;gap:8px;margin-bottom:14px">
+    <button class="tall-nuevo" style="margin-bottom:0" onclick="abrirNuevaOT()">+ Nueva Orden de Trabajo</button>
+    <button onclick="abrirBasureroOT()" style="padding:11px 14px;background:#f1f5f9;border:1.5px solid #e2e8f0;border-radius:10px;font-size:18px;cursor:pointer;flex-shrink:0" title="Basurero">🗑</button>
+  </div>
   <div id="lista-ot"><div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">Cargando...</div></div>
 </div>
 
@@ -389,6 +392,53 @@ async function cargarRIsFlota() {
   } catch(e) { console.warn('RIs no cargados:', e); }
 }
 
+async function eliminarOT(id) {
+  if (!confirm('¿Mandás esta OT al basurero?')) return;
+  try {
+    await supa('ordenes_trabajo?id=eq.'+id, 'PATCH', { eliminado: true });
+    toast('OT enviada al basurero', 'ok');
+    document.querySelector('.tall-detalle-modal')?.remove();
+    await cargarOTs();
+  } catch(e) { toast('Error: '+e.message, 'err'); }
+}
+
+window.eliminarOT = eliminarOT;
+
+window.abrirBasureroOT = async function() {
+  const eliminadas = await supa('ordenes_trabajo', 'GET', null, '?eliminado=eq.true&order=numero_ot.desc');
+  const area = document.createElement('div');
+  area.className = 'tall-detalle-modal';
+  area.style = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;padding:20px;display:flex;align-items:center;justify-content:center';
+  const items = eliminadas.length
+    ? eliminadas.map(ot => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid #f1f5f9">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#0b1b35">OT ${ot.numero_ot} — ${ot.ri||'—'}</div>
+            <div style="font-size:11px;color:#94a3b8">${ot.dependencia||''} · ${ot.fecha||''}</div>
+          </div>
+          <button onclick="recuperarOT(${ot.id})" style="padding:6px 12px;background:#dcfce7;color:#166534;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">↩ Recuperar</button>
+        </div>`).join('')
+    : '<p style="text-align:center;color:#94a3b8;padding:20px;font-size:13px">El basurero está vacío</p>';
+  area.innerHTML = `
+    <div style="background:#fff;border-radius:14px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #f1f5f9">
+        <span style="font-size:16px;font-weight:800;color:#0b1b35">🗑 Basurero — OTs eliminadas</span>
+        <button onclick="this.closest('.tall-detalle-modal').remove()" style="background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer">×</button>
+      </div>
+      ${items}
+    </div>`;
+  document.body.appendChild(area);
+};
+
+window.recuperarOT = async function(id) {
+  try {
+    await supa('ordenes_trabajo?id=eq.'+id, 'PATCH', { eliminado: false });
+    toast('OT recuperada', 'ok');
+    document.querySelector('.tall-detalle-modal')?.remove();
+    await cargarOTs();
+  } catch(e) { toast('Error: '+e.message, 'err'); }
+};
+
 async function cambiarEstadoOT(id, estado) {
   try {
     await supa('ordenes_trabajo?id=eq.'+id, 'PATCH', { estado });
@@ -401,7 +451,7 @@ async function cambiarEstadoOT(id, estado) {
 // ── Cargar ────────────────────────────────────────────────────────────────────
 async function cargarOTs() {
   try {
-    otsCache = await supa('ordenes_trabajo', 'GET', null, '?order=numero_ot.desc');
+    otsCache = await supa('ordenes_trabajo', 'GET', null, '?eliminado=not.eq.true&order=numero_ot.desc');
     renderOTs();
   } catch(e) { document.getElementById('lista-ot').innerHTML = '<div style="padding:20px;color:#ef4444;font-size:13px">Error al cargar</div>'; }
 }
@@ -537,9 +587,12 @@ window.abrirDetalleOT = function(id) {
   const esCerrada = (ot.estado||'') === 'Cerrada';
   area.innerHTML = `
     <div style="padding:16px;background:#fff;border-radius:14px;border:1px solid #e2e8f0;max-width:500px;width:100%">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <span style="font-size:18px;font-weight:800;color:#0b1b35">OT ${ot.numero_ot}</span>
-        <span class="tall-badge ${(ot.estado||'abierta').toLowerCase()}">${ot.estado||'Abierta'}</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px;font-weight:800;color:#0b1b35">OT ${ot.numero_ot}</span>
+          <span class="tall-badge ${(ot.estado||'abierta').toLowerCase()}">${ot.estado||'Abierta'}</span>
+        </div>
+        <button onclick="this.closest('.tall-detalle-modal').remove()" style="background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;padding:0 4px">×</button>
       </div>
       <div style="font-size:13px;color:#334155;line-height:2">
         <b>Fecha:</b> ${ot.fecha||''}<br><b>RI:</b> ${ot.ri||''}<br>
@@ -553,9 +606,9 @@ window.abrirDetalleOT = function(id) {
           ? `<button class="tall-btn-retiro no-print" onclick="reabrirOT(${id})">🔓 Reabrir OT</button>`
           : `<button style="flex:1;padding:10px;background:#64748b;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer" class="no-print" onclick="cerrarOT(${id})">🔒 Cerrar OT</button>`
         }
+        <button style="padding:10px 14px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer" class="no-print" onclick="eliminarOT(${id})">🗑</button>
       </div>
-    </div>
-    <button onclick="this.parentElement.remove()" style="position:absolute;top:16px;right:16px;background:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">×</button>`;
+    </div>`;
   document.body.appendChild(area);
 };
 
