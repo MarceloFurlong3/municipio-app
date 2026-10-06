@@ -263,7 +263,21 @@ export function montarTalleres(c) {
         <input id="ot-ri" list="ri-datalist" placeholder="Escribí el RI..." oninput="this.value=this.value.toUpperCase()" autocomplete="off">
         <datalist id="ri-datalist"></datalist>
       </div>
-      <div class="tall-field"><label>Sección</label><input id="ot-seccion" placeholder="Ej: ALMACEN" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="tall-field"><label>Sección</label>
+        <select id="ot-seccion">
+          <option value="">— Seleccioná —</option>
+          <option>ALMACEN</option>
+          <option>MECANICA PESADA</option>
+          <option>MECANICA LIVIANA</option>
+          <option>CARPINTERIA</option>
+          <option>TORNERIA</option>
+          <option>HERRERIA</option>
+          <option>MECANICA VIAL</option>
+          <option>LUBRICENTRO</option>
+          <option>OFICINA</option>
+          <option>ELECTRICIDAD</option>
+        </select>
+      </div>
     </div>
     <div class="tall-field"><label>Dependencia</label>
       <select id="ot-dependencia"><option value="">— Seleccioná la dependencia —</option></select>
