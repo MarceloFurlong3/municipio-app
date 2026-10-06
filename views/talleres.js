@@ -107,7 +107,7 @@ export function montarTalleres(c) {
   <div class="tall-modal">
     <h3>📋 Nueva Orden de Trabajo</h3>
     <div class="tall-row">
-      <div class="tall-field"><label>R.I. del Vehículo</label><input id="ot-ri" placeholder="Ej: A779" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="tall-field"><label>R.I. del Vehículo</label><input id="ot-ri" placeholder="Ej: T136 - FORD F 100 NAFTA" oninput="this.value=this.value.toUpperCase()"></div>
       <div class="tall-field"><label>Sección</label><input id="ot-seccion" placeholder="Ej: ALMACEN" oninput="this.value=this.value.toUpperCase()"></div>
     </div>
     <div class="tall-field"><label>Dependencia</label><input id="ot-dependencia" placeholder="Ej: 210 - SEC. ECONOMIA" oninput="this.value=this.value.toUpperCase()"></div>
@@ -383,39 +383,59 @@ function imprimirOT(ot) {
   if (!ot) return;
   document.getElementById('print-area').innerHTML = `
 <style>
-@media print { @page { size:A4; margin:15mm; } body { font-family:Arial,sans-serif; font-size:11px; } }
-.ot-doc { font-family:Arial,sans-serif; font-size:11px; }
-.ot-linea { border-bottom:1px solid #000; margin:6px 0; min-height:18px; }
+@media print { @page { size:A4 portrait; margin:18mm 15mm; } body { margin:0; } }
+.ot-doc { font-family:Arial,sans-serif; font-size:11px; color:#000; line-height:1.5; }
+.ot-linea { border-bottom:1px dashed #555; margin:9px 0 0; height:0; }
+.ot-bloque { margin-top:16px; }
+.ot-fila { display:flex; align-items:flex-end; gap:4px; margin-bottom:6px; }
+.ot-fila b { font-size:10px; font-weight:bold; white-space:nowrap; }
+.ot-raya { flex:1; border-bottom:1px dashed #555; margin-bottom:1px; }
 </style>
 <div class="ot-doc">
-  <p style="font-weight:bold">Departamento de Talleres</p><br>
-  <p style="font-weight:bold">O.T.: ${ot.numero_ot}</p>
-  <div style="display:flex;justify-content:space-between">
-    <div>
-      <p>Sección: ${ot.seccion||''}</p>
-      <p style="font-weight:bold">R.I.: ${ot.ri||''}</p>
-      <p>Dependencia: ${ot.dependencia||''}</p>
-      <p>Solicita: ${ot.legajo_solicita||''} &nbsp; ${ot.nombre_solicita||''}</p>
+  <p style="margin:0 0 6px;font-size:9px">Departamento de Talleres</p>
+  <p style="margin:0 0 14px;font-size:15px;font-weight:bold;padding-left:20px">O.T.: ${ot.numero_ot}</p>
+  <div style="display:flex;justify-content:space-between;padding-left:20px">
+    <div style="line-height:1.9">
+      <div>Sección &nbsp;<b>${ot.seccion||''}</b></div>
+      <div>R.I.: &nbsp;<b>${ot.ri||''}</b></div>
+      <div>Dependencia: &nbsp;${ot.dependencia||''}</div>
+      <div>Solicita: &nbsp;${ot.legajo_solicita||''} &nbsp;&nbsp; ${ot.nombre_solicita||''}</div>
     </div>
-    <div style="text-align:right">
-      <p>Fecha: ${ot.fecha||''}</p>
-      <p>Memo n°: ${ot.memo||''}</p>
-      <p>Odómetro: ${ot.odometro||0}</p>
+    <div style="text-align:right;line-height:1.9">
+      <div>Fecha: &nbsp;${ot.fecha||''}</div>
+      <div>Memo n°: &nbsp;${ot.memo||''}</div>
+      <div>Odómetro: &nbsp;${ot.odometro||0}</div>
     </div>
   </div>
-  <p style="margin-top:10px">${(ot.descripcion||'').replace(/\n/g,'<br>')}</p>
-  <div style="margin-top:12px"><span style="font-weight:bold;font-size:10px;text-transform:uppercase">TAREAS EFECTUADAS:</span>
-    <div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div>
+  <p style="margin:14px 0 18px;padding-left:20px">${(ot.descripcion||'').toUpperCase().replace(/\n/g,'<br>')}</p>
+
+  <div class="ot-bloque">
+    <div class="ot-fila"><b>TAREAS EFECTUADAS:</b><div class="ot-raya"></div></div>
+    <div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div>
   </div>
-  <div style="margin-top:10px"><span style="font-weight:bold;font-size:10px;text-transform:uppercase">REPUESTOS/INSUMOS UTILIZADOS:</span>
-    <div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div>
+
+  <div class="ot-bloque">
+    <div class="ot-fila"><b>REPUESTOS/INSUMOS UTILIZADOS:</b><div class="ot-raya"></div></div>
+    <div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div>
   </div>
-  <div style="margin-top:10px"><span style="font-weight:bold;font-size:10px;text-transform:uppercase">LEG. AGENTE INTERVINIENTES:</span><div class="ot-linea"></div></div>
-  <div style="margin-top:10px"><span style="font-weight:bold;font-size:10px;text-transform:uppercase">CANTIDAD DE HORAS UTILIZADAS:</span><div class="ot-linea"></div></div>
-  <br>
-  <div style="display:flex;gap:40px"><p>Fecha y Hora Entrada: _______________</p><p>Fecha y Hora Salida: _______________</p></div>
-  <div style="display:flex;gap:20px;margin-top:8px">
-    <p>Firma: ____________</p><p>Aclaración: ____________________</p><p>Legajo: _____</p><p>Fecha: _______</p>
+
+  <div class="ot-bloque">
+    <div class="ot-fila"><b>LEG. AGENTE INTERVINIENTES:</b><div class="ot-raya"></div></div>
+  </div>
+  <div style="margin-top:10px">
+    <div class="ot-fila"><b>CANTIDAD DE HORAS UTILIZADASDAS:</b><div class="ot-raya"></div></div>
+    <div class="ot-linea"></div>
+  </div>
+
+  <div style="margin-top:24px;display:flex;gap:40px">
+    <span>Fecha y Hora Entrada: _______________</span>
+    <span>Fecha y Hora Salida: _______________</span>
+  </div>
+  <div style="display:flex;gap:24px;margin-top:12px">
+    <span>Firma: ____________</span>
+    <span>Aclaración: ________________________</span>
+    <span>Legajo: ______</span>
+    <span>Fecha: ________</span>
   </div>
 </div>`;
   setTimeout(() => window.print(), 200);
