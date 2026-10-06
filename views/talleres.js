@@ -599,7 +599,7 @@ function imprimirOT(ot) {
            padding:14mm 14mm 10mm 14mm; box-sizing:border-box;
            width:210mm; min-height:297mm; background:white; }
 .ot-linea { border-bottom:1px dashed #555; height:20px; margin:0; }
-.ot-bloque { margin-top:9px; }
+.ot-bloque { margin-top:16px; }
 .ot-fila { display:flex; align-items:flex-end; gap:4px; }
 .ot-fila b { font-size:9.5px; font-weight:bold; white-space:nowrap; }
 .ot-raya { flex:1; border-bottom:1px dashed #555; margin-bottom:2px; }
@@ -620,7 +620,7 @@ function imprimirOT(ot) {
       <div>Odómetro: &nbsp;${ot.odometro||0}</div>
     </div>
   </div>
-  <p style="margin:7px 0 10px;padding-left:14px">${(ot.descripcion||'').toUpperCase().replace(/\n/g,'<br>')}</p>
+  <p style="margin:7px 0 20px;padding-left:14px">${(ot.descripcion||'').toUpperCase().replace(/\n/g,'<br>')}</p>
 
   <div class="ot-bloque">
     <div class="ot-fila"><b>TAREAS EFECTUADAS:</b><div class="ot-raya"></div></div>
