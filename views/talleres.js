@@ -5,8 +5,166 @@
 // ══════════════════════════════════════════════════════════════════════════════
 import { toast } from '../shared.js';
 
-const SUPA_URL = 'https://mghbnxtavlzwvjozhojc.supabase.co';
-const SUPA_KEY = 'sb_publishable_0wctZO5HpYmOmh5kfFGAcw_GJLJ-ec9';
+const SUPA_URL  = 'https://mghbnxtavlzwvjozhojc.supabase.co';
+const SUPA_KEY  = 'sb_publishable_0wctZO5HpYmOmh5kfFGAcw_GJLJ-ec9';
+const FLOTA_URL = 'https://sugkmcdngvtvwzglodkh.supabase.co';
+const FLOTA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1Z2ttY2RuZ3Z0dnd6Z2xvZGtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwNjk5ODMsImV4cCI6MjA5ODY0NTk4M30.hL-0sa0ZmeY7iZ_Zy50Dy8k8oxqbYlc4cWZ82HDiEbM';
+
+const DEPENDENCIAS = [
+  ['ACCION COMUNITARIA','525'],['ADMINISTRACION DE REDES, DATOS Y TRANSF. DIGITAL','266'],
+  ['AGENCIA DE SEGURIDAD VIAL','368'],['ALMACEN COMPRAS TALLERES','238'],
+  ['ALMACEN DE COMPRAS','238'],['ANALISIS BROMATOLOGICOS','559'],
+  ['ANTICIPOS JUBILADOS','235'],['ARCHIVO','315'],['AREA PROGRAMATICA II','692'],
+  ['AREA PROGRAMATICA III','693'],['AREA PROGRAMATICA IV','694'],['AREA PROGRAMATICA IX','699'],
+  ['AREA PROGRAMATICA V','695'],['AREA PROGRAMATICA VI','696'],['AREA PROGRAMATICA VII','697'],
+  ['AREA PROGRAMATICA VIII','698'],['AREA PROGRAMATICA X','700'],['AREA PROGRAMATICA XI','701'],
+  ['ARTICULACION PROGRAMATICA','579'],['ASESORIA MUNICIPAL DE TIERRAS Y ESCRITURAS','300'],
+  ['BALNEARIO MALDONADO','602'],['BROMATOLOGIA Y PROTECC. SALUD','530'],
+  ['CASA DE ABRIGO','605'],['CASA DE ABRIGO II','713'],['CASA DEL NIÑO VILLA ROSAS','521'],
+  ['CENTRO CAPAC. Y PROMOCION VILLA MIRAMAR','545'],['CENTRO DE ATENCION AL VECINO','106'],
+  ['CENTRO DE CAPAC.INVEST. Y RELAC. INSTITUCIONALES','603'],['CENTRO DE DIA Y FLIA. SUST.','563'],
+  ['CENTRO DE GESTION COMUNAL','814'],['CENTRO DE GESTION CULTURAL ISLAS MALVINAS','349'],
+  ['CENTRO DE SALUD MPAL. ING. WHITE','534'],['COLONIA AGUSTIN DE ARRIETA','601'],
+  ['COMEDIA MUNICIPAL','341'],['COMITE TECNICO EJECUTIVO','614'],['COMUNICACIONES','317'],
+  ['COORD. DE REC. ARTISTICOS','325'],['COORD. PROGRAMA ENVION','815'],
+  ['COORDINACION LEGAL DE PRODUCCION','104'],['CTRO MPAL. DE CULTURA POPULAR','339'],
+  ['CTRO MPAL. DE EST. FOLKLORICOS','337'],['DELEGACION ALTOS','403'],
+  ['DELEGACION BAHIA BLANCA CENTRO','126'],['DELEGACION CABILDO','114'],
+  ['DELEGACION GRAL. DANIEL CERRI','115'],['DELEGACION INGENIERO WHITE','116'],
+  ['DELEGACION LAS VILLAS','117'],['DELEGACION NOROESTE','124'],['DELEGACION NORTE','123'],
+  ['DELEGACION SESQUICENTENARIO','109'],['DELEGACION VILLA H. GREEN','119'],
+  ['DELEGACION VILLA ROSAS','118'],['DEP. CATASTRO','224'],['DEP. COMPRAS','211'],
+  ['DEP. CONTADURIA','215'],['DEP. CONTR. OBRAS PARTICULARES','421'],
+  ['DEP. DE ANALISIS POLITICA FISCAL','212'],['DEP. DE PLANIFICACION Y CONTROL FINANCIERO','253'],
+  ['DEP. EDUCACION VIAL','342'],['DEP. ELECTRICIDAD Y MECANICA','415'],
+  ['DEP. HABILITACIONES','227'],['DEP. INSPECCIONES','213'],
+  ['DEP. MANTENIMIENTO DE ALUMBRADO PUBLICO','437'],['DEP. NIÑEZ, ADOLESCENCIA Y FAMILIA','517'],
+  ['DEP. PLANEAMIENTO URBANO','422'],['DEP. PROC. Y COBRO JUD. DE MULTAS IMPAGAS','153'],
+  ['DEP. PROYECTOS Y OBRAS','416'],['DEP. RECAUDACION','222'],['DEP. TERRITORIAL','843'],
+  ['DEP. TESORERIA','218'],['DEP. VIALIDAD','417'],['DEP. VIVIENDA','420'],
+  ['DEPARTAMENTO CEMENTERIO','431'],['DEPARTAMENTO CONSERVACION VIAL','668'],
+  ['DEPARTAMENTO CONTROL LIMPIEZA URBANA','364'],['DEPARTAMENTO INGENIERIA DE TRANSITO','334'],
+  ['DEPARTAMENTO INSPECCIONES OBRAS VIALES Y SERVICIOS','401'],
+  ['DEPARTAMENTO MANTENIMIENTO OBRAS CIVILES','438'],['DEPARTAMENTO TRANSPORTE URBANO','336'],
+  ['DEPOSITO ACCION COMUNITARIA','598'],
+  ['DIR GRAL. INTEG Y FORTALECIMIENTO DERECHOS HUMANOS','508'],
+  ['DIR. ADJUNTA DE EMPLEO, ECON SOCIAL Y JUVENTUD','503'],
+  ['DIR. ADJUNTA MANT. CIVIL EN ESPACIOS PUBLICOS','642'],['DIR. ADULTOS MAYORES','505'],
+  ['DIR. CATASTRO','842'],['DIR. DE DESARROLLO Y ECONOMIA SOCIAL','363'],
+  ['DIR. DE LOGISTICA Y DISTRIBUCION','634'],['DIR. DE MONITOREO Y COMUNICACION','355'],
+  ['DIR. DE TURISMO','793'],['DIR. FORTALECIMIENTO COMUNITARIO','705'],
+  ['DIR. GRAL DE ASUNTOS TURISTICOS E INTERNACIONALES','361'],
+  ['DIR. GRAL PLANEAMIENTO EDUCATIVO','631'],['DIR. GRAL. DE CATASTRO Y OBRAS PARTICULARES','465'],
+  ['DIR. GRAL. DE DESARROLLO SOCIAL','717'],['DIR. GRAL. DE MOVILIDAD URBANA','335'],
+  ['DIR. GRAL. DE PLANIFICACION ESTRATEGICA EN SALUD','574'],
+  ['DIR. GRAL. DE PROG. Y PROY. FORM. Y CAPAC.','632'],
+  ['DIR. GRAL. ELECTRICIDAD, ALUMB Y CEMENTERIO','464'],['DIR. OBRAS MUNICIPALES','414'],
+  ['DIR. PLANEAMIENTO URBANO','418'],['DIR. PREVENCION Y CONVIVENCIA','704'],
+  ['DIR. RECOPILACION Y ANALISIS DE DATOS','706'],['DIR. VIVIENDA','400'],
+  ['DIR.DE SERVICIO SOCIAL','800'],['DIR.GRAL.DEFENSA CIVIL','120'],
+  ['DIRECCION ADJ ORDENAMIENTO FORESTAL URBANO','419'],
+  ['DIRECCION ADJ. INTEGRACION TERRITORIAL','669'],['DIRECCION ADJUNTA DE CULTOS','509'],
+  ['DIRECCION ADJUNTA FERIAS EN ESPACIOS PUBLICOS','646'],
+  ['DIRECCION ARTE EMERGENTE Y ACT CULT EN ESP PUBLICO','369'],
+  ['DIRECCION DE ACCION CULTURAL','376'],['DIRECCION DE COORDINACION','507'],
+  ['DIRECCION DE ESPACIOS PUBLICOS','461'],['DIRECCION DE ESTUDIOS URBANISTICOS','402'],
+  ['DIRECCION DE GESTION DE RIESGO','759'],
+  ['DIRECCION DE HOGARES, DE PREVENCION Y PROTECCION','638'],
+  ['DIRECCION DE INCLUSION Y ACCESIBILIDAD','620'],
+  ['DIRECCION DE INFRAESTRUCTURA ESCOLAR','633'],['DIRECCION DE MUSEOS Y ARTE','797'],
+  ['DIRECCION DE PLANIFICACION URBANA','639'],['DIRECCION DE POLITICAS DE GENERO','546'],
+  ['DIRECCION DE RELACIONES INSTITUCIONALES','622'],
+  ['DIRECCION DE SERVICIOS COOPERATIVOS','249'],['DIRECCION DE TIERRAS','453'],
+  ['DIRECCION DE TRABAJO','531'],['DIRECCION GENERAL DE CAPITAL HUMANO','243'],
+  ['DIRECCION GENERAL DE DELEGACIONES','377'],['DIRECCION GENERAL DE FISCALIZACION','365'],
+  ['DIRECCION GENERAL DE MANTENIMIENTO VIAL','647'],
+  ['DIRECCION GENERAL DE OPERACIONES VIALES','648'],
+  ['DIRECCION GRAL. COORDINACION Y MONITOREO INTERNO','627'],
+  ['DIRECCION GRAL. DE ACCION SOCIAL','515'],['DIRECCION GRAL. DE EDUCACION','628'],
+  ['DIRECCION GRAL. DE ESPACIO TECNO','107'],['DIRECCION GRAL. DE ESPACIOS PUBLICOS','637'],
+  ['DIRECCION GRAL. DE ORDENAMIENTO URBANO','645'],['DIRECCION GRAL. DE PRODUCCION','105'],
+  ['DIRECCION GRAL. DE PROTECCION CIUDADANA','718'],
+  ['DIRECCION GRAL. DE TECNICA JURIDICA','113'],['DIRECCION GRAL. HIGIENE URBANA','671'],
+  ['DIRECCION JUVENTUD','506'],['DIRECCION MUNICIPAL DE ESTADISTICAS','323'],
+  ['DIRECCION PLANIFICACION Y CONTROL','301'],['DIRECCION PROGRAMAS SOCIOEDUCATIVOS','635'],
+  ['DIV. ACCESIBILIDAD E INCLUSION','587'],['DIV. MESA DE ENTRADAS Y ARCHIVO','314'],
+  ['DIV. PLAN MAS VIDA','589'],['DIVISION ADMINISTRTIVA DE TRANSITO','332'],
+  ['DIVISION CENTRAL TERRITORIAL','845'],['DIVISION CONSORCIOS Y OBRAS BASICAS','228'],
+  ['DIVISION DE GESTION TERRITORIAL','846'],
+  ['DIVISION DE ORDENAMIENTO DEL ESPACIO URBANO','640'],
+  ['DIVISION DE PREVENCION COMUNITARIA','358'],
+  ['DIVISION DE PRODUCCION SOCIAL DEL HABITAT','847'],['DIVISION DE SALUD LABORAL','232'],
+  ['DIVISION DE TRANSITO URBANO','345'],['DIVISION EDUCACION ECOLOGICA URBANA','442'],
+  ['DIVISION HIGIENE Y SEGURIDAD EN EL TRABAJO','262'],
+  ['DIVISION INSPECCIONES DE MANTENIMIENTO URBANO','450'],
+  ['DIVISION PARQUE AUTOMOTOR','424'],['DPTO. ADMINISTRACION DE PERSONAL','230'],
+  ['DPTO. ALUMB. Y SEMAFORIZACION DE ESPACIOS PUBLICOS','670'],
+  ['DPTO. DE PROYECTOS URBANOS','844'],['DPTO. EPIDEMIOLOGIA Y CALIDAD','805'],
+  ['DPTO. LOGISTICA Y MANTENIMIENTO URBANO','411'],
+  ['DPTO. REGISTRO LICITADORES Y OBRAS DE CONSORCIOS','425'],
+  ['DPTO. SALUD MENTAL Y ADICCIONES','547'],['DPTO. TALLERES Y MAESTRANZA','412'],
+  ['ECONOMIA SOCIAL','624'],['EPIDEMIOLOGIA AMBIENTAL','611'],
+  ['ESCUELA CAPACITACION LABORAL SAN ROQUE','553'],
+  ['ESPACIO DE PRIMERA INFANCIA MI LUGAR','702'],
+  ['ESPACIO PRIMERA INFANCIA RAYITO DE SOL','544'],['FONDO EDUCATIVO','604'],
+  ['FONDO ROTATIVO SOLIDARIO DE MATERIALES','709'],
+  ['HOGAR DE NIÑOS Y NIÑAS PEUMAYEN','591'],['HOGAR DEL ADOLESCENTE','519'],
+  ['HOGAR NUEVA PROVINCIA 2153','752'],['HOGAR REFUGIO DE VIOLENCIA FAMILIAR','590'],
+  ['INSTITUTO CULTURAL MUNICIPAL','311'],
+  ['INSTITUTO DE INNOVAC, DES ECONOMICO Y RELAC INSTIT','128'],
+  ['INSTITUTO JOSE LUIS CANTILO','520'],
+  ['Instituto Municipal Viv. Tierras y Habital','473'],
+  ['INSUMOS Y DROGAS','572'],['JARDIN MATERNAL PACIFICO','538'],
+  ['JARDIN MATERNAL TE VEO BIEN','539'],
+  ['JARDIN MATERNAL Y DE INFANTES INGENIERO WHITE','684'],
+  ['JARDIN MATERNAL Y DE INFANTES PETETE','535'],
+  ['JARDIN MATERNAL Y DE INFANTES PIMPOLLITOS','537'],
+  ['JARDIN MATERNAL Y DE INFANTES SAN VICENTE','536'],
+  ['JOVENES POR LOS JOVENES','594'],['JUBILACIONES Y PENSIONES','261'],
+  ['LAB BAHIA LABORATORIO','848'],
+  ['LILIANA ABIA DE CECI (EX CASA DEL NIÑO ING. WHITE)','522'],
+  ['MAMAS CUIDADORAS','564'],['MAYORDOMIA','432'],['MERCADO MUNICIPAL','233'],
+  ['MUSEO DE ARTE CONTEMPORANEO','318'],['MUSEO DE BELLAS ARTES','801'],
+  ['MUSEO DE CIENCIAS NATURALES','327'],['MUSEO DEL DEPORTE','367'],
+  ['MUSEO DEL PUERTO','312'],['MUSEO FERROWHITE','802'],['MUSEO HISTORICO','313'],
+  ['OFICINA DE COORDINACION NIDO','532'],['OFICINA DE PERSONAS JURIDICAS','754'],
+  ['OFICINA PROMOCION INDUSTRIAL','200'],['P. ENVION CARACOL','608'],
+  ['P. ENVION ESTELA MARIS','606'],['P. ENVION SALADERO','609'],
+  ['PEQUEÑOS HOGARES - HOGAR SUST.','524'],['PLAN APELL','613'],
+  ['PLANTAS DE TRATAMIENTO Y CLASIFICACION DE RESIDUOS','641'],
+  ['PROG. ENVION SPURR','607'],['PROGRAMA CABALLO DE TROYA','753'],
+  ['PROTOCOLO Y RELACIONES INSTITUCIONALES','130'],['PROYECTO APICULTURA','578'],
+  ['REGISTRO PATRIMONIAL','217'],['SANEAMIENTO AMBIENTAL','617'],
+  ['SEC. DE GOBIERNO','310'],['SEC. DE INFRAESTRUCTURA','410'],
+  ['SEC. DE POLITICAS SOCIALES','510'],['SEC. DE SALUD','796'],
+  ['SECRETARIA DE ECONOMIA','210'],['SECRETARIA DE GESTION URBANA','636'],
+  ['SECRETARIA DE INNOVACION Y TRANSFORACION DIGITAL','134'],
+  ['SECRETARIA DE PRODUCCION','101'],['SECRETARIA GENERAL','110'],
+  ['SERV. LOC. PROM Y PROT.I.DER. NIÑOS Y ADOLES.','583'],
+  ['SERVICIO SOCIAL','516'],['SISTEMA DE AMAS EXTERNAS','585'],
+  ['SUBDIR. DE PRENSA Y CONTENIDOS PUBLICOS','121'],
+  ['SUBDIR. GESTION DE PRESTACIONES','513'],['SUBDIRECCION DE PRESUPUESTO','219'],
+  ['SUBDIRECCION DE SISTEMAS E INFR. TECNOLOGICA','223'],
+  ['SUBSEC. DE GESTION AMBIENTAL','621'],
+  ['SUBSEC. DE PLANIFICACION Y CALIDAD DE GESTION','140'],
+  ['SUBSECR. DE NINEZ, ADOLESC. Y FAMILIA','593'],
+  ['SUBSECRETARIA DE ATENCION INTEGRAL DE SALUD','576'],
+  ['SUBSECRETARIA DE DEPORTES','527'],['SUBSECRETARIA DE DESARROLLO','102'],
+  ['SUBSECRETARIA DE DESARROLLO SOCIAL','504'],
+  ['SUBSECRETARIA DE GESTION URBANA','644'],
+  ['SUBSECRETARIA DE GESTION Y ECON DE LA SALUD','511'],
+  ['SUBSECRETARIA DE GOBIERNO','372'],['SUBSECRETARIA DE INGRESOS PUBLICOS','221'],
+  ['SUBSECRETARIA DE MANTENIMIENTO','447'],
+  ['SUBSECRETARIA DE MEDIOS Y CONTENIDOS PUBLICOS','129'],
+  ['SUBSECRETARIA DE PLANIFICACION','155'],
+  ['SUBSECRETARIA DE PLANIFICACION Y CONTROL DEL GASTO','248'],
+  ['SUBSECRETARIA DE PLANIFICACION Y DESARROLLO URBANO','446'],
+  ['SUBSECRETARIA DE PRODUCCION Y EMPLEO','244'],
+  ['SUBSECRETARIA DE PROTECCION CIUDADANA','791'],
+  ['SUBSECRETARIA DE PROYECTOS Y OBRAS','445'],['SUBSECRETARIA LEGAL Y TECNICA','152'],
+  ['SUEÑO DE BARRILETE','523'],['TEATRO MUNICIPAL','319'],
+  ['TERMINAL DE OMNIBUS SAN FRANCISCO DE ASIS','330'],['TRIBUNAL DE FALTAS','111'],
+].sort((a,b) => a[0].localeCompare(b[0]));
 
 async function supa(tabla, method = 'GET', body = null, params = '') {
   const res = await fetch(`${SUPA_URL}/rest/v1/${tabla}${params}`, {
@@ -25,7 +183,7 @@ async function supa(tabla, method = 'GET', body = null, params = '') {
 
 async function proximoNumeroOT() {
   const rows = await supa('ordenes_trabajo', 'GET', null, '?select=numero_ot&order=numero_ot.desc&limit=1');
-  return rows.length ? rows[0].numero_ot + 1 : 131001;
+  return rows.length ? rows[0].numero_ot + 1 : 1;
 }
 async function proximoNumeroVale() {
   const rows = await supa('vales_materiales', 'GET', null, '?select=numero_vale&order=numero_vale.desc&limit=1');
@@ -101,10 +259,15 @@ export function montarTalleres(c) {
   <div class="tall-modal">
     <h3>📋 Nueva Orden de Trabajo</h3>
     <div class="tall-row">
-      <div class="tall-field"><label>R.I. del Vehículo</label><input id="ot-ri" placeholder="Ej: T136 - FORD F 100 NAFTA" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="tall-field"><label>R.I. del Vehículo</label>
+        <input id="ot-ri" list="ri-datalist" placeholder="Escribí el RI..." oninput="this.value=this.value.toUpperCase()" autocomplete="off">
+        <datalist id="ri-datalist"></datalist>
+      </div>
       <div class="tall-field"><label>Sección</label><input id="ot-seccion" placeholder="Ej: ALMACEN" oninput="this.value=this.value.toUpperCase()"></div>
     </div>
-    <div class="tall-field"><label>Dependencia</label><input id="ot-dependencia" placeholder="Ej: 210 - SEC. ECONOMIA" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="tall-field"><label>Dependencia</label>
+      <select id="ot-dependencia"><option value="">— Seleccioná la dependencia —</option></select>
+    </div>
     <div class="tall-row">
       <div class="tall-field"><label>Legajo solicita</label><input id="ot-legajo" type="number" placeholder="12640"></div>
       <div class="tall-field"><label>Nombre solicita</label><input id="ot-nombre" placeholder="APELLIDO NOMBRE" oninput="this.value=this.value.toUpperCase()"></div>
@@ -129,7 +292,9 @@ export function montarTalleres(c) {
       <div class="tall-field"><label>R.I. del Vehículo</label><input id="v-ri" placeholder="Ej: A779" oninput="this.value=this.value.toUpperCase()"></div>
       <div class="tall-field"><label>O/T N°</label><input id="v-ot" type="number" placeholder="131001"></div>
     </div>
-    <div class="tall-field"><label>Dependencia</label><input id="v-dependencia" placeholder="Ej: CONSERVACIÓN VIAL" oninput="this.value=this.value.toUpperCase()"></div>
+    <div class="tall-field"><label>Dependencia</label>
+      <select id="v-dependencia"><option value="">— Seleccioná la dependencia —</option></select>
+    </div>
     <div class="tall-row">
       <div class="tall-field"><label>Código U.D. N°</label><input id="v-codud" placeholder="2201"></div>
       <div class="tall-field"><label>Legajo solicita</label><input id="v-legajo" type="number" placeholder="12640"></div>
@@ -168,7 +333,11 @@ export function montarTalleres(c) {
   window.marcarRetirado = marcarRetirado;
   window.imprimirOTById   = (id) => imprimirOT(otsCache.find(o => o.id === id));
   window.imprimirValeById = (id) => imprimirVale(valesCache.find(x => x.id === id));
+  window.cerrarOT   = (id) => cambiarEstadoOT(id, 'Cerrada');
+  window.reabrirOT  = (id) => cambiarEstadoOT(id, 'Abierta');
 
+  llenarDependencias();
+  cargarRIsFlota();
   cargarOTs();
   cargarVales();
 }
@@ -179,6 +348,40 @@ function switchTallTab(tab) {
   document.getElementById('tab-vale').classList.toggle('on', tab === 'vale');
   document.getElementById('panel-ot').style.display   = tab === 'ot'   ? '' : 'none';
   document.getElementById('panel-vale').style.display = tab === 'vale' ? '' : 'none';
+}
+
+// ── Dependencias y RIs ───────────────────────────────────────────────────────
+function llenarDependencias() {
+  const opts = DEPENDENCIAS.map(([n,c]) => `<option value="${c} - ${n}">${n} (${c})</option>`).join('');
+  ['ot-dependencia','v-dependencia'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) sel.insertAdjacentHTML('beforeend', opts);
+  });
+}
+
+async function cargarRIsFlota() {
+  try {
+    const res = await fetch(`${FLOTA_URL}/rest/v1/kits_filtros?select=modelo,ris&ris=not.is.null`, {
+      headers: { 'apikey': FLOTA_KEY, 'Authorization': 'Bearer ' + FLOTA_KEY }
+    });
+    const data = await res.json();
+    const pares = [];
+    data.forEach(({ modelo, ris }) => {
+      (ris || []).forEach(ri => pares.push({ ri: ri.toUpperCase(), modelo: modelo.toUpperCase() }));
+    });
+    pares.sort((a,b) => a.ri.localeCompare(b.ri));
+    const dl = document.getElementById('ri-datalist');
+    if (dl) dl.innerHTML = pares.map(p => `<option value="${p.ri} - ${p.modelo}">`).join('');
+  } catch(e) { console.warn('RIs no cargados:', e); }
+}
+
+async function cambiarEstadoOT(id, estado) {
+  try {
+    await supa('ordenes_trabajo?id=eq.'+id, 'PATCH', { estado });
+    toast('OT ' + estado.toLowerCase(), 'ok');
+    document.querySelector('.tall-detalle-modal')?.remove();
+    await cargarOTs();
+  } catch(e) { toast('Error: '+e.message, 'err'); }
 }
 
 // ── Cargar ────────────────────────────────────────────────────────────────────
@@ -315,18 +518,27 @@ window.abrirDetalleOT = function(id) {
   const ot = otsCache.find(o => o.id === id);
   if (!ot) return;
   const area = document.createElement('div');
+  area.className = 'tall-detalle-modal';
   area.style = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;padding:20px;display:flex;align-items:center;justify-content:center';
+  const esCerrada = (ot.estado||'') === 'Cerrada';
   area.innerHTML = `
     <div style="padding:16px;background:#fff;border-radius:14px;border:1px solid #e2e8f0;max-width:500px;width:100%">
-      <div style="font-size:18px;font-weight:800;color:#0b1b35;margin-bottom:12px">OT ${ot.numero_ot}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:18px;font-weight:800;color:#0b1b35">OT ${ot.numero_ot}</span>
+        <span class="tall-badge ${(ot.estado||'abierta').toLowerCase()}">${ot.estado||'Abierta'}</span>
+      </div>
       <div style="font-size:13px;color:#334155;line-height:2">
         <b>Fecha:</b> ${ot.fecha||''}<br><b>RI:</b> ${ot.ri||''}<br>
         <b>Sección:</b> ${ot.seccion||''}<br><b>Dependencia:</b> ${ot.dependencia||''}<br>
         <b>Solicita:</b> ${ot.nombre_solicita||''} (Leg. ${ot.legajo_solicita||''})<br>
-        <b>Descripción:</b> ${ot.descripcion||''}<br><b>Estado:</b> ${ot.estado||''}
+        <b>Descripción:</b> ${ot.descripcion||''}
       </div>
-      <div style="display:flex;gap:8px;margin-top:14px">
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
         <button class="tall-btn-print no-print" onclick="imprimirOTById(${id})">🖨 Imprimir OT</button>
+        ${esCerrada
+          ? `<button class="tall-btn-retiro no-print" onclick="reabrirOT(${id})">🔓 Reabrir OT</button>`
+          : `<button style="flex:1;padding:10px;background:#64748b;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer" class="no-print" onclick="cerrarOT(${id})">🔒 Cerrar OT</button>`
+        }
       </div>
     </div>
     <button onclick="this.parentElement.remove()" style="position:absolute;top:16px;right:16px;background:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">×</button>`;
