@@ -382,7 +382,7 @@
     </button>
   </nav>
 
-  <!-- Bottom nav rol Depósito (usuario depósito: Depósito + Flota + Lubricentro) -->
+  <!-- Bottom nav rol Depósito (usuario depósito: Depósito + Flota + Lubricentro + Talleres) -->
   <nav class="bottom-nav" id="nav-rol-dep" style="display:none">
     <button class="bottom-btn activo" id="nav-rd-deposito">
       <i data-lucide="package"></i>
@@ -395,6 +395,10 @@
     <button class="bottom-btn" id="nav-rd-lubricentro">
       <i data-lucide="droplets"></i>
       Lubricentro
+    </button>
+    <button class="bottom-btn" id="nav-rd-talleres">
+      <i data-lucide="wrench"></i>
+      Talleres
     </button>
   </nav>
 
@@ -486,6 +490,12 @@
       activarPanel('panel-lubricentro');
       activarBtnRd('nav-rd-lubricentro');
       if (!lubricentroCargado) { lubricentroCargado = true; montarLubricentro(document.getElementById('panel-lubricentro')); }
+    } else if (seccion === 'talleres') {
+      document.getElementById('nav-titulo').textContent = 'Talleres';
+      document.getElementById('nav-subtitulo').textContent = 'OT · Vales';
+      activarPanel('panel-talleres');
+      activarBtnRd('nav-rd-talleres');
+      if (!talleresCargado) { talleresCargado = true; montarTalleres(document.getElementById('panel-talleres')); }
     }
     if (window.lucide) lucide.createIcons();
   }
@@ -533,9 +543,10 @@
   document.addEventListener('DOMContentLoaded', () => {
 
     // ── Nav rol Depósito ──
-    document.getElementById('nav-rd-deposito').addEventListener('click', () => irSeccionRd('deposito'));
-    document.getElementById('nav-rd-flota').addEventListener('click',    () => irSeccionRd('flota'));
+    document.getElementById('nav-rd-deposito').addEventListener('click',    () => irSeccionRd('deposito'));
+    document.getElementById('nav-rd-flota').addEventListener('click',       () => irSeccionRd('flota'));
     document.getElementById('nav-rd-lubricentro').addEventListener('click', () => irSeccionRd('lubricentro'));
+    document.getElementById('nav-rd-talleres').addEventListener('click',    () => irSeccionRd('talleres'));
 
     // ── Nav Solicitudes ──
     document.getElementById('nav-sol-solicitudes').addEventListener('click', () => {
