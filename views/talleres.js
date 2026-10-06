@@ -380,58 +380,61 @@ function imprimirOT(ot) {
   document.getElementById('print-area').innerHTML = `
 <style>
 @media print {
-  @page { size:A4 portrait; margin:15mm 15mm; }
+  @page { size:A4 portrait; margin:0; }
   body { margin:0; background:white !important; }
-  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
-.ot-doc { font-family:Arial,sans-serif; font-size:10.5px; color:#000; line-height:1.4; }
-.ot-linea { border-bottom:1px dashed #555; margin:7px 0 0; height:0; }
-.ot-bloque { margin-top:11px; }
-.ot-fila { display:flex; align-items:flex-end; gap:4px; margin-bottom:4px; }
+.ot-wrap { font-family:Arial,sans-serif; font-size:10.5px; color:#000; line-height:1.4;
+           padding:14mm 14mm 10mm 14mm; box-sizing:border-box;
+           width:210mm; min-height:297mm; background:white; }
+.ot-linea { border-bottom:1px dashed #555; height:20px; margin:0; }
+.ot-bloque { margin-top:9px; }
+.ot-fila { display:flex; align-items:flex-end; gap:4px; }
 .ot-fila b { font-size:9.5px; font-weight:bold; white-space:nowrap; }
-.ot-raya { flex:1; border-bottom:1px dashed #555; margin-bottom:1px; }
+.ot-raya { flex:1; border-bottom:1px dashed #555; margin-bottom:2px; }
 </style>
-<div class="ot-doc">
-  <p style="margin:0 0 4px;font-size:9px">Departamento de Talleres</p>
-  <p style="margin:0 0 10px;font-size:14px;font-weight:bold;padding-left:16px">O.T.: ${ot.numero_ot}</p>
-  <div style="display:flex;justify-content:space-between;padding-left:16px">
-    <div style="line-height:1.8">
+<div class="ot-wrap">
+  <p style="margin:0 0 3px;font-size:9px">Departamento de Talleres</p>
+  <p style="margin:0 0 8px;font-size:14px;font-weight:bold;padding-left:14px">O.T.: ${ot.numero_ot}</p>
+  <div style="display:flex;justify-content:space-between;padding-left:14px">
+    <div style="line-height:1.75">
       <div>Sección &nbsp;<b>${ot.seccion||''}</b></div>
       <div>R.I.: &nbsp;<b>${ot.ri||''}</b></div>
       <div>Dependencia: &nbsp;${ot.dependencia||''}</div>
       <div>Solicita: &nbsp;${ot.legajo_solicita||''} &nbsp;&nbsp; ${ot.nombre_solicita||''}</div>
     </div>
-    <div style="text-align:right;line-height:1.8">
+    <div style="text-align:right;line-height:1.75">
       <div>Fecha: &nbsp;${ot.fecha||''}</div>
       <div>Memo n°: &nbsp;${ot.memo||''}</div>
       <div>Odómetro: &nbsp;${ot.odometro||0}</div>
     </div>
   </div>
-  <p style="margin:8px 0 12px;padding-left:16px">${(ot.descripcion||'').toUpperCase().replace(/\n/g,'<br>')}</p>
+  <p style="margin:7px 0 10px;padding-left:14px">${(ot.descripcion||'').toUpperCase().replace(/\n/g,'<br>')}</p>
 
   <div class="ot-bloque">
     <div class="ot-fila"><b>TAREAS EFECTUADAS:</b><div class="ot-raya"></div></div>
-    <div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div>
+    <div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div>
   </div>
 
   <div class="ot-bloque">
     <div class="ot-fila"><b>REPUESTOS/INSUMOS UTILIZADOS:</b><div class="ot-raya"></div></div>
-    <div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div>
+    <div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div><div class="ot-linea"></div>
   </div>
 
   <div class="ot-bloque">
     <div class="ot-fila"><b>LEG. AGENTE INTERVINIENTES:</b><div class="ot-raya"></div></div>
+    <div class="ot-linea"></div>
   </div>
-  <div style="margin-top:8px">
+
+  <div class="ot-bloque">
     <div class="ot-fila"><b>CANTIDAD DE HORAS UTILIZADASDAS:</b><div class="ot-raya"></div></div>
     <div class="ot-linea"></div>
   </div>
 
-  <div style="margin-top:18px;display:flex;gap:40px">
+  <div style="margin-top:14mm;display:flex;gap:30px">
     <span>Fecha y Hora Entrada: _______________</span>
     <span>Fecha y Hora Salida: _______________</span>
   </div>
-  <div style="display:flex;gap:20px;margin-top:10px">
+  <div style="display:flex;gap:18px;margin-top:8px">
     <span>Firma: ____________</span>
     <span>Aclaración: ________________________</span>
     <span>Legajo: ______</span>
