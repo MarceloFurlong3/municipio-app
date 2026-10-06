@@ -220,6 +220,13 @@
       .inicio-areas { max-width: 400px; }
     }
   </style>
+  <style>
+    @media print {
+      body > *:not(#print-area) { display:none !important; }
+      #print-area { display:block !important; }
+      .no-print { display:none !important; }
+    }
+  </style>
 </head>
 <body>
 
@@ -611,5 +618,7 @@
 <script>
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
+<!-- Área de impresión: hijo directo de body para que el CSS @media print funcione -->
+<div id="print-area" style="display:none"></div>
 </body>
 </html>

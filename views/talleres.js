@@ -40,12 +40,6 @@ let valesCache = [];
 export function montarTalleres(c) {
   c.innerHTML = `
 <style>
-@media print {
-  body > *:not(#print-area) { display:none !important; }
-  #print-area { display:block !important; }
-  .no-print { display:none !important; }
-}
-#print-area { display:none; }
 .tall-tabs { display:flex; gap:0; border-bottom:2px solid #e2e8f0; margin-bottom:14px; }
 .tall-tab { flex:1; padding:10px; text-align:center; font-size:13px; font-weight:700; color:#64748b; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; background:none; border-top:none; border-left:none; border-right:none; transition:all .15s; }
 .tall-tab.on { color:#0b1b35; border-bottom-color:#0b1b35; }
@@ -159,7 +153,7 @@ export function montarTalleres(c) {
   </div>
 </div>
 
-<div id="print-area"></div>`;
+`;
 
   window.switchTallTab  = switchTallTab;
   window.abrirNuevaOT   = abrirNuevaOT;
@@ -172,6 +166,8 @@ export function montarTalleres(c) {
   window.imprimirOT     = imprimirOT;
   window.imprimirVale   = imprimirVale;
   window.marcarRetirado = marcarRetirado;
+  window.imprimirOTById   = (id) => imprimirOT(otsCache.find(o => o.id === id));
+  window.imprimirValeById = (id) => imprimirVale(valesCache.find(x => x.id === id));
 
   cargarOTs();
   cargarVales();
@@ -330,7 +326,7 @@ window.abrirDetalleOT = function(id) {
         <b>Descripción:</b> ${ot.descripcion||''}<br><b>Estado:</b> ${ot.estado||''}
       </div>
       <div style="display:flex;gap:8px;margin-top:14px">
-        <button class="tall-btn-print no-print" onclick="imprimirOT(otsCache.find(o=>o.id===${id}))">🖨 Imprimir OT</button>
+        <button class="tall-btn-print no-print" onclick="imprimirOTById(${id})">🖨 Imprimir OT</button>
       </div>
     </div>
     <button onclick="this.parentElement.remove()" style="position:absolute;top:16px;right:16px;background:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">×</button>`;
@@ -355,7 +351,7 @@ window.abrirDetalleVale = function(id) {
       </div>
       <ul style="margin:10px 0 10px 18px;font-size:13px">${itemsHtml}</ul>
       <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="tall-btn-print no-print" onclick="imprimirVale(valesCache.find(x=>x.id===${id}))">🖨 Imprimir</button>
+        <button class="tall-btn-print no-print" onclick="imprimirValeById(${id})">🖨 Imprimir</button>
         ${v.estado!=='Retirado'?`<button class="tall-btn-retiro no-print" onclick="marcarRetirado(${id},this)">✅ Marcar retirado</button>`:''}
       </div>
     </div>
