@@ -178,7 +178,9 @@ async function supa(tabla, method = 'GET', body = null, params = '') {
     body: body ? JSON.stringify(body) : null
   });
   if (!res.ok) throw new Error(await res.text());
-  return method === 'DELETE' ? null : res.json();
+  if (method === 'DELETE' || method === 'PATCH') return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 async function proximoNumeroOT() {
