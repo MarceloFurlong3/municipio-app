@@ -418,7 +418,10 @@ window.abrirBasureroOT = async function() {
             <div style="font-size:13px;font-weight:700;color:#0b1b35">OT ${ot.numero_ot} — ${ot.ri||'—'}</div>
             <div style="font-size:11px;color:#94a3b8">${ot.dependencia||''} · ${ot.fecha||''}</div>
           </div>
-          <button onclick="recuperarOT(${ot.id})" style="padding:6px 12px;background:#dcfce7;color:#166534;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">↩ Recuperar</button>
+          <div style="display:flex;gap:6px">
+            <button onclick="recuperarOT(${ot.id})" style="padding:6px 12px;background:#dcfce7;color:#166534;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">↩ Recuperar</button>
+            <button onclick="eliminarDefinitivoOT(${ot.id})" style="padding:6px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">🗑 Borrar</button>
+          </div>
         </div>`).join('')
     : '<p style="text-align:center;color:#94a3b8;padding:20px;font-size:13px">El basurero está vacío</p>';
   area.innerHTML = `
@@ -430,6 +433,16 @@ window.abrirBasureroOT = async function() {
       ${items}
     </div>`;
   document.body.appendChild(area);
+};
+
+window.eliminarDefinitivoOT = async function(id) {
+  if (!confirm('⚠️ Esto borra la OT para siempre. ¿Confirmás?')) return;
+  try {
+    await supa('ordenes_trabajo?id=eq.'+id, 'DELETE');
+    toast('OT eliminada definitivamente', 'ok');
+    document.querySelector('.tall-detalle-modal')?.remove();
+    await cargarOTs();
+  } catch(e) { toast('Error: '+e.message, 'err'); }
 };
 
 window.recuperarOT = async function(id) {
