@@ -36,9 +36,6 @@ const SERVICE_DEFAULT = [
   { id:14, fecha:'2026-08-03', ri:'A644', modelo:'Corsa',          dep:'',                       nota:'',                        estado:'pendiente' },
 ];
 
-// Supabase NK/Flota (donde vive kits_filtros)
-const SUPA_NK_URL = 'https://sugkmcdngvtvwzglodkh.supabase.co';
-const SUPA_NK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1Z2ttY2RuZ3Z0dnd6Z2xvZGtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwNjk5ODMsImV4cCI6MjA5ODY0NTk4M30.hL-0sa0ZmeY7iZ_Zy50Dy8k8oxqbYlc4cWZ82HDiEbM';
 
 const ACEITES_KEY = 'inventario_aceites';
 const ACEITES_VER = 'v4';
@@ -198,10 +195,8 @@ async function cargarKits() {
   if (el) el.innerHTML = '<div class="kits-loading">Cargando...</div>';
   try {
     const [rKits, rAlts] = await Promise.all([
-      fetch(SUPA_NK_URL + '/rest/v1/kits_filtros?select=*&order=modelo.asc&limit=500',
-        { headers: { apikey: SUPA_NK_KEY, Authorization: 'Bearer ' + SUPA_NK_KEY } }),
-      fetch(SUPA_NK_URL + '/rest/v1/kits_alternativos?select=*&limit=1000',
-        { headers: { apikey: SUPA_NK_KEY, Authorization: 'Bearer ' + SUPA_NK_KEY } })
+      fetch('/api/proxy?project=nk&path=kits_filtros&select=*&order=modelo.asc&limit=500'),
+      fetch('/api/proxy?project=nk&path=kits_alternativos&select=*&limit=1000')
     ]);
     kits = await rKits.json();
     const alts = await rAlts.json();
@@ -323,8 +318,7 @@ async function abrirKitDetalle(id) {
   try {
     const query = ris.map(r => `ri=eq.${encodeURIComponent(r)}`).join('&');
     const r = await fetch(
-      SUPA_NK_URL + '/rest/v1/flota_fotos?select=ri,url&or=(' + ris.map(r => `ri.eq.${r}`).join(',') + ')&limit=50',
-      { headers: { apikey: SUPA_NK_KEY, Authorization: 'Bearer ' + SUPA_NK_KEY } }
+      '/api/proxy?project=nk&path=flota_fotos&select=ri,url&or=(' + ris.map(r => `ri.eq.${r}`).join(',') + ')&limit=50'
     );
     const fotos = await r.json();
     if (!fotos.length) {

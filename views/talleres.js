@@ -5,10 +5,6 @@
 // ══════════════════════════════════════════════════════════════════════════════
 import { toast } from '../shared.js';
 
-const SUPA_URL  = 'https://mghbnxtavlzwvjozhojc.supabase.co';
-const SUPA_KEY  = 'sb_publishable_0wctZO5HpYmOmh5kfFGAcw_GJLJ-ec9';
-const FLOTA_URL = 'https://sugkmcdngvtvwzglodkh.supabase.co';
-const FLOTA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1Z2ttY2RuZ3Z0dnd6Z2xvZGtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwNjk5ODMsImV4cCI6MjA5ODY0NTk4M30.hL-0sa0ZmeY7iZ_Zy50Dy8k8oxqbYlc4cWZ82HDiEbM';
 
 const DEPENDENCIAS = [
   ['ACCION COMUNITARIA','525'],['ADMINISTRACION DE REDES, DATOS Y TRANSF. DIGITAL','266'],
@@ -167,14 +163,10 @@ const DEPENDENCIAS = [
 ].sort((a,b) => a[0].localeCompare(b[0]));
 
 async function supa(tabla, method = 'GET', body = null, params = '') {
-  const res = await fetch(`${SUPA_URL}/rest/v1/${tabla}${params}`, {
+  const qs = params ? `&${params.replace(/^\?/, '')}` : '';
+  const res = await fetch(`/api/proxy?project=municipio&path=${tabla}${qs}`, {
     method,
-    headers: {
-      'apikey': SUPA_KEY,
-      'Authorization': 'Bearer ' + SUPA_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': method === 'POST' ? 'return=representation' : ''
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : null
   });
   if (!res.ok) throw new Error(await res.text());
@@ -185,7 +177,7 @@ async function supa(tabla, method = 'GET', body = null, params = '') {
 
 async function proximoNumeroOT() {
   const rows = await supa('ordenes_trabajo', 'GET', null, '?select=numero_ot&order=numero_ot.desc&limit=1');
-  return rows.length ? rows[0].numero_ot + 1 : 1;
+  return rows.length ? rows[0].numero_ot + 1 : 200001;
 }
 async function proximoNumeroVale() {
   const rows = await supa('vales_materiales', 'GET', null, '?select=numero_vale&order=numero_vale.desc&limit=1');
@@ -224,6 +216,13 @@ export function montarTalleres(c) {
 .tall-field label { display:block; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
 .tall-field input, .tall-field select, .tall-field textarea { width:100%; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; outline:none; font-family:inherit; transition:border-color .15s; }
 .tall-field input:focus, .tall-field select:focus, .tall-field textarea:focus { border-color:#0b1b35; }
+.dep-wrap { position:relative; }
+.dep-input { width:100%; box-sizing:border-box; }
+.dep-drop { display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1.5px solid #0b1b35; border-top:none; border-radius:0 0 8px 8px; max-height:200px; overflow-y:auto; z-index:999; }
+.dep-opt { padding:9px 12px; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+.dep-opt:hover { background:#f1f5f9; }
+.dep-cod { font-size:11px; color:#94a3b8; margin-left:8px; }
+.dep-empty { color:#94a3b8; cursor:default; }
 .tall-field textarea { resize:vertical; min-height:70px; }
 .tall-row { display:flex; gap:10px; }
 .tall-row .tall-field { flex:1; }
@@ -247,9 +246,34 @@ export function montarTalleres(c) {
 </div>
 
 <div id="panel-ot">
-  <div style="display:flex;gap:8px;margin-bottom:14px">
+  <div style="display:flex;gap:8px;margin-bottom:10px">
     <button class="tall-nuevo" style="margin-bottom:0" onclick="abrirNuevaOT()">+ Nueva Orden de Trabajo</button>
     <button onclick="abrirBasureroOT()" style="padding:11px 14px;background:#f1f5f9;border:1.5px solid #e2e8f0;border-radius:10px;font-size:18px;cursor:pointer;flex-shrink:0" title="Basurero">🗑</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:6px">
+    <select id="ot-filtro-estado" onchange="renderOTs()" style="flex:1;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+      <option value="">Todas</option>
+      <option value="Abierta">Abiertas</option>
+      <option value="Cerrada">Cerradas</option>
+    </select>
+    <select id="ot-filtro-mes" onchange="renderOTs()" style="flex:1;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+      <option value="">Todos los meses</option>
+    </select>
+  </div>
+  <div style="margin-bottom:12px">
+    <select id="ot-filtro-seccion" onchange="renderOTs()" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;outline:none">
+      <option value="">Todos los sectores</option>
+      <option>ALMACEN</option>
+      <option>MECANICA PESADA</option>
+      <option>MECANICA LIVIANA</option>
+      <option>CARPINTERIA</option>
+      <option>TORNERIA</option>
+      <option>HERRERIA</option>
+      <option>MECANICA VIAL</option>
+      <option>LUBRICENTRO</option>
+      <option>OFICINA</option>
+      <option>ELECTRICIDAD</option>
+    </select>
   </div>
   <div id="lista-ot"><div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">Cargando...</div></div>
 </div>
@@ -265,7 +289,7 @@ export function montarTalleres(c) {
     <h3>📋 Nueva Orden de Trabajo</h3>
     <div class="tall-row">
       <div class="tall-field"><label>R.I. del Vehículo</label>
-        <input id="ot-ri" list="ri-datalist" placeholder="Escribí el RI..." oninput="this.value=this.value.toUpperCase()" autocomplete="off">
+        <input id="ot-ri" list="ri-datalist" placeholder="Escribí el RI..." oninput="filtrarRIs(this.value)" autocomplete="off">
         <datalist id="ri-datalist"></datalist>
       </div>
       <div class="tall-field"><label>Sección</label>
@@ -285,7 +309,11 @@ export function montarTalleres(c) {
       </div>
     </div>
     <div class="tall-field"><label>Dependencia</label>
-      <select id="ot-dependencia"><option value="">— Seleccioná la dependencia —</option></select>
+      <div class="dep-wrap" id="wrap-ot-dependencia">
+        <input type="text" id="ot-dependencia-input" class="dep-input" placeholder="Buscar dependencia..." autocomplete="off">
+        <input type="hidden" id="ot-dependencia">
+        <div class="dep-drop" id="ot-dependencia-drop"></div>
+      </div>
     </div>
     <div class="tall-row">
       <div class="tall-field"><label>Legajo solicita</label><input id="ot-legajo" type="number" placeholder="12640"></div>
@@ -312,7 +340,11 @@ export function montarTalleres(c) {
       <div class="tall-field"><label>O/T N°</label><input id="v-ot" type="number" placeholder="131001"></div>
     </div>
     <div class="tall-field"><label>Dependencia</label>
-      <select id="v-dependencia"><option value="">— Seleccioná la dependencia —</option></select>
+      <div class="dep-wrap" id="wrap-v-dependencia">
+        <input type="text" id="v-dependencia-input" class="dep-input" placeholder="Buscar dependencia..." autocomplete="off">
+        <input type="hidden" id="v-dependencia">
+        <div class="dep-drop" id="v-dependencia-drop"></div>
+      </div>
     </div>
     <div class="tall-row">
       <div class="tall-field"><label>Código U.D. N°</label><input id="v-codud" placeholder="2201"></div>
@@ -354,6 +386,7 @@ export function montarTalleres(c) {
   window.imprimirValeById = (id) => imprimirVale(valesCache.find(x => x.id === id));
   window.cerrarOT   = (id) => cambiarEstadoOT(id, 'Cerrada');
   window.reabrirOT  = (id) => cambiarEstadoOT(id, 'Abierta');
+  window.renderOTs  = renderOTs;
 
   llenarDependencias();
   cargarRIsFlota();
@@ -370,28 +403,71 @@ function switchTallTab(tab) {
 }
 
 // ── Dependencias y RIs ───────────────────────────────────────────────────────
-function llenarDependencias() {
-  const opts = DEPENDENCIAS.map(([n,c]) => `<option value="${c} - ${n}">${n} (${c})</option>`).join('');
-  ['ot-dependencia','v-dependencia'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel) sel.insertAdjacentHTML('beforeend', opts);
+function initDepSearch(baseId) {
+  const input = document.getElementById(baseId + '-input');
+  const hidden = document.getElementById(baseId);
+  const drop   = document.getElementById(baseId + '-drop');
+  const wrap   = document.getElementById('wrap-' + baseId);
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase().trim();
+    if (q.length < 1) { drop.style.display = 'none'; return; }
+    const filtered = DEPENDENCIAS.filter(([n,c]) =>
+      n.toLowerCase().includes(q) || c.includes(q)
+    ).slice(0, 20);
+    drop.innerHTML = filtered.length
+      ? filtered.map(([n,c]) =>
+          `<div class="dep-opt" data-val="${c} - ${n}">${n} <span class="dep-cod">${c}</span></div>`
+        ).join('')
+      : '<div class="dep-opt dep-empty">Sin resultados</div>';
+    drop.style.display = 'block';
+  });
+
+  drop.addEventListener('click', e => {
+    const opt = e.target.closest('.dep-opt[data-val]');
+    if (!opt) return;
+    input.value  = opt.querySelector('.dep-cod') ? opt.firstChild.textContent.trim() : '';
+    hidden.value = opt.dataset.val;
+    drop.style.display = 'none';
+  });
+
+  document.addEventListener('click', e => {
+    if (!wrap.contains(e.target)) drop.style.display = 'none';
   });
 }
 
+function llenarDependencias() {
+  ['ot-dependencia','v-dependencia'].forEach(initDepSearch);
+}
+
+let riData = [];
+
 async function cargarRIsFlota() {
   try {
-    const res = await fetch(`${FLOTA_URL}/rest/v1/kits_filtros?select=modelo,ris&ris=not.is.null`, {
-      headers: { 'apikey': FLOTA_KEY, 'Authorization': 'Bearer ' + FLOTA_KEY }
-    });
+    const res  = await fetch('https://marcelofurlong3.github.io/flota-municipal/indice_vehiculos.json');
     const data = await res.json();
-    const pares = [];
-    data.forEach(({ modelo, ris }) => {
-      (ris || []).forEach(ri => pares.push({ ri: ri.toUpperCase(), modelo: modelo.toUpperCase() }));
-    });
-    pares.sort((a,b) => a.ri.localeCompare(b.ri));
-    const dl = document.getElementById('ri-datalist');
-    if (dl) dl.innerHTML = pares.map(p => `<option value="${p.ri} - ${p.modelo}">`).join('');
+    const porRi = data.por_ri || {};
+    riData = Object.values(porRi)
+      .filter(v => v.ri)
+      .map(v => ({
+        ri:   v.ri.toUpperCase(),
+        desc: v.modelo ? v.modelo.toUpperCase() : '',
+        dep:  v.dep  || ''
+      }))
+      .sort((a,b) => a.ri.localeCompare(b.ri));
   } catch(e) { console.warn('RIs no cargados:', e); }
+}
+
+window.filtrarRIs = function(val) {
+  const q = val.toUpperCase();
+  const dl = document.getElementById('ri-datalist');
+  if (!dl || q.length < 1) return;
+  const filtered = riData.filter(v => v.ri.startsWith(q) || v.desc.includes(q)).slice(0, 30);
+  dl.innerHTML = filtered.map(v => {
+    const label = [v.desc, v.dep].filter(Boolean).join(' · ');
+    return `<option value="${v.ri}">${label}</option>`;
+  }).join('');
 }
 
 async function eliminarOT(id) {
@@ -456,7 +532,10 @@ window.recuperarOT = async function(id) {
 
 async function cambiarEstadoOT(id, estado) {
   try {
-    await supa('ordenes_trabajo?id=eq.'+id, 'PATCH', { estado });
+    const patch = { estado };
+    if (estado === 'Cerrada') patch.fecha_cierre = new Date().toISOString().slice(0,10);
+    if (estado === 'Abierta') patch.fecha_cierre = null;
+    await supa('ordenes_trabajo?id=eq.'+id, 'PATCH', patch);
     toast('OT ' + estado.toLowerCase(), 'ok');
     document.querySelector('.tall-detalle-modal')?.remove();
     await cargarOTs();
@@ -467,8 +546,30 @@ async function cambiarEstadoOT(id, estado) {
 async function cargarOTs() {
   try {
     otsCache = await supa('ordenes_trabajo', 'GET', null, '?eliminado=not.eq.true&order=numero_ot.desc');
+    poblarMesesOT();
     renderOTs();
   } catch(e) { document.getElementById('lista-ot').innerHTML = '<div style="padding:20px;color:#ef4444;font-size:13px">Error al cargar</div>'; }
+}
+
+function poblarMesesOT() {
+  const sel = document.getElementById('ot-filtro-mes');
+  if (!sel) return;
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const vistos = new Set();
+  const opts = [];
+  otsCache.forEach(ot => {
+    const f = ot.fecha || (ot.created_at ? ot.created_at.slice(0,10) : null);
+    if (!f) return;
+    const [anio, mes] = f.split('-');
+    const key = `${anio}-${mes}`;
+    if (!vistos.has(key)) {
+      vistos.add(key);
+      opts.push({ key, label: `${meses[parseInt(mes)-1]} ${anio}` });
+    }
+  });
+  const actual = sel.value;
+  sel.innerHTML = '<option value="">Todos los meses</option>' +
+    opts.map(o => `<option value="${o.key}" ${actual===o.key?'selected':''}>${o.label}</option>`).join('');
 }
 
 async function cargarVales() {
@@ -481,8 +582,23 @@ async function cargarVales() {
 // ── Render ────────────────────────────────────────────────────────────────────
 function renderOTs() {
   const el = document.getElementById('lista-ot');
-  if (!otsCache.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">Sin órdenes de trabajo</div>'; return; }
-  el.innerHTML = otsCache.map(ot => `
+  const filtroEstado  = (document.getElementById('ot-filtro-estado')||{}).value || '';
+  const filtroMes     = (document.getElementById('ot-filtro-mes')||{}).value || '';
+  const filtroSeccion = (document.getElementById('ot-filtro-seccion')||{}).value || '';
+
+  let lista = otsCache;
+  if (filtroEstado)  lista = lista.filter(o => (o.estado||'Abierta') === filtroEstado);
+  if (filtroSeccion) lista = lista.filter(o => (o.seccion||'') === filtroSeccion);
+  if (filtroMes)     lista = lista.filter(o => {
+    const f = o.fecha || (o.created_at ? o.created_at.slice(0,10) : '');
+    return f.slice(0,7) === filtroMes;
+  });
+
+  if (!lista.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">Sin resultados</div>'; return; }
+  el.innerHTML = lista.map(ot => {
+    const fechaApertura = ot.fecha || (ot.created_at ? ot.created_at.slice(0,10) : '—');
+    const fechaCierre   = ot.fecha_cierre ? ` · Cerrada: ${ot.fecha_cierre}` : '';
+    return `
     <div class="tall-card" onclick="abrirDetalleOT(${ot.id})">
       <div class="tall-card-hdr">
         <span class="tall-num">OT ${ot.numero_ot}</span>
@@ -491,8 +607,9 @@ function renderOTs() {
       <div class="tall-ri">${ot.ri||'—'} · ${ot.seccion||'—'}</div>
       <div class="tall-dep">${ot.dependencia||'—'}</div>
       <div class="tall-items">${ot.descripcion||''}</div>
-      <div style="font-size:10px;color:#94a3b8;margin-top:5px">${ot.fecha||''} · ${ot.nombre_solicita||'—'}</div>
-    </div>`).join('');
+      <div style="font-size:10px;color:#94a3b8;margin-top:5px">Abierta: ${fechaApertura}${fechaCierre} · ${ot.nombre_solicita||'—'}</div>
+    </div>`;
+  }).join('');
 }
 
 function renderVales() {
