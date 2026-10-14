@@ -162,15 +162,17 @@ const DEPENDENCIAS = [
   ['TERMINAL DE OMNIBUS SAN FRANCISCO DE ASIS','330'],['TRIBUNAL DE FALTAS','111'],
 ].sort((a,b) => a[0].localeCompare(b[0]));
 
-async function supa(tabla, method = 'GET', body = null, params = '') {
-  const qs = params ? `&${params.replace(/^\?/, '')}` : '';
-  const res = await fetch(`/api/proxy?project=municipio&path=${tabla}${qs}`, {
+async function supa(tablaConFiltro, method = 'GET', body = null, params = '') {
+  const [tabla, inlineQs] = tablaConFiltro.split('?');
+  const allQs = [inlineQs, params.replace(/^\?/, '')].filter(Boolean).join('&');
+  const url = `/api/github-data?tabla=${tabla}${allQs ? '&' + allQs : ''}`;
+  const res = await fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : null
   });
   if (!res.ok) throw new Error(await res.text());
-  if (method === 'DELETE' || method === 'PATCH') return null;
+  if (method === 'DELETE' || res.status === 204) return null;
   const text = await res.text();
   return text ? JSON.parse(text) : null;
 }
