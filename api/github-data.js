@@ -1,6 +1,6 @@
 const OWNER  = 'MarceloFurlong3';
 const REPO   = 'municipio-app';
-const BRANCH = 'main';
+const BRANCH = 'dev';
 
 export default async function handler(req, res) {
   const { tabla, order, limit, select, id, ...filters } = req.query;
