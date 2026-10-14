@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     Authorization: 'Bearer ' + config.key,
     'Content-Type': 'application/json',
   };
-  if (req.method === 'POST') headers['Prefer'] = 'return=representation';
+  if (req.method === 'POST' || req.method === 'PATCH') headers['Prefer'] = 'return=representation';
 
   const upstream_res = await fetch(upstream, {
     method: req.method,
@@ -33,6 +33,7 @@ export default async function handler(req, res) {
     body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
   });
 
+  if (upstream_res.status === 204) return res.status(204).end();
   const data = await upstream_res.json();
   res.status(upstream_res.status).json(data);
 }
